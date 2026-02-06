@@ -5,7 +5,7 @@
   import RangeSlider from "./components/RangeSlider.svelte";
   import DetailCard from "./components/DetailCard.svelte";
   import { scaleOrdinal } from 'd3-scale';
-  import { schemeCategory10 } from 'd3-scale-chromatic';
+  import { schemeTableau10 } from 'd3-scale-chromatic';
 
   // Resolve data URL from query params (url | filename [+ bucket]) or env fallback
   let resolvedDataUrl = "";
@@ -58,7 +58,7 @@
     domainColumn = "target",
     uniqueValues = [];
   let selectedValues = new Set();
-  let opacity = 0.15,
+  let opacity = 0.85,
     startDate = null,
     endDate = null;
   let filteredData = [],
@@ -75,12 +75,13 @@
   let hoveredData = null;
   let clusterLabels = []; // Labels to show on map regions
   let selectedData = null; // Pinned/clicked data
+  let filterCollapsed = false; // For mobile filter panel toggle
 
   // Display selected data if available, otherwise show hovered data
   $: displayedData = selectedData || hoveredData;
 
   // Color scale for the detail card
-  $: colorScale = scaleOrdinal(schemeCategory10)
+  $: colorScale = scaleOrdinal(schemeTableau10)
     .domain(domainColumn ? uniqueValues : []);
 
   // Computed min/max dates from actual data
@@ -102,11 +103,18 @@
   };
 
   // Strip "(Read: ...)" from topic labels for cleaner display
+  // Highlight interesting categories with a star
+  const featuredValues = ['General Clarification', 'General Explainer'];
   function formatValueLabel(val) {
     if (!val) return val;
     const str = String(val);
     const match = str.match(/^(.+?)\s*\(Read:\s*.+?\)\s*$/);
-    return match ? match[1].trim() : str;
+    const label = match ? match[1].trim() : str;
+    // Add star for featured values
+    if (featuredValues.includes(label)) {
+      return `★ ${label}`;
+    }
+    return label;
   }
   $: {
     // Wait until columns are known before adjusting the selected domain
@@ -589,148 +597,27 @@
   }
 </script>
 
-<!-- App Layout -->
-<div class="container">
-  <div class="title-section">
-    <h1 class="title">What Gets Corrected</h1>
-    <p class="subtitle">
-      A semantic map of the claims the Singapore government has publicly challenged as of Feb 5, 2026. Each dot represents a disputed claim, grouped by linguistic similarity. Together, they reveal the themes most likely to prompt official clarification.
-    </p>
-  </div>
-
-  <div class="content">
-    <!-- Filters Panel -->
-    <div class="filter-panel left-panel">
-      <div class="filter-actions">
-        <button class="reset-btn" on:click={resetFilters}>Reset filters</button>
-      </div>
-
-      <div class="nerd-box">
-        <details>
-          <summary><span class="toggle-icon">+</span> What is a Semantic Map?</summary>
-          <div class="nerd-box-content">
-            <p>
-              This semantic map visualizes fact-check articles from Singapore's
-              Factually.gov.sg. Articles addressing similar misinformation themes
-              (e.g., COVID-19, political claims, economic policies) appear closer together.
-            </p>
-            <p>Use this map to:</p>
-            <ul>
-              <li>
-                Explore patterns in misinformation topics over time.
-              </li>
-              <li>Identify recurring themes in false claims.</li>
-              <li>
-                Search for specific topics using keywords.
-              </li>
-            </ul>
-          </div>
-        </details>
-      </div>
-
-
-      <label for="search-input">🔍 Search:</label>
-      <input
-        id="search-input"
-        type="text"
-        placeholder="Search keywords..."
-        on:input={handleSearch}
-      />
-
-      {#if allowedDomainColumns.length}
-        <label for="domain-column">🎨 Color by:</label>
-        <select
-          id="domain-column"
-          on:change={handleDomainChange}
-          bind:value={domainColumn}
-        >
-          <option value="" disabled>Select column</option>
-          {#each allowedDomainColumns as column}
-            <option value={column}>{columnLabels[column] || column}</option>
-          {/each}
-        </select>
-      {/if}
-
-      {#if uniqueValues.length}
-        <label for="value-select"
-          >✨ Highlight Values:</label
-        >
-        <select
-          id="value-select"
-          multiple
-          size="6"
-          class="multi-select"
-          on:change={handleSelectionChange}
-        >
-          <option value="__ALL__" selected={selectedValues.size === 0}>— Show All —</option>
-          {#each uniqueValues as item}
-            <option value={item} selected={selectedValues.has(item)}
-              >{formatValueLabel(item)}</option
-            >
-          {/each}
-        </select>
-      {/if}
-
-      <label for="opacity-slider">💡 Adjust Opacity:</label>
-      <input
-        id="opacity-slider"
-        type="range"
-        min="0"
-        max=".3"
-        step="0.01"
-        bind:value={opacity}
-        on:input={handleOpacityChange}
-      />
-
-      <div class="date-controls">
-        <label for="start-date">📅 Date Range:</label>
-        <input
-          id="start-date"
-          type="date"
-          value={formatDateInput(startDate)}
-          max={formatDateInput(maxDateFromData)}
-          on:change={(e) => handleDateChange(e, "start")}
-        />
-        <input
-          id="end-date"
-          type="date"
-          value={formatDateInput(endDate)}
-          max={formatDateInput(maxDateFromData)}
-          on:change={(e) => handleDateChange(e, "end")}
-        />
-
-        <RangeSlider
-          min={0}
-          max={maxAllowedIndex}
-          bind:startValue={startDateIndex}
-          bind:endValue={endDateIndex}
-          markers={electionMarkers}
-          on:startChange={(e) => handleDateChange(e, "start")}
-          on:endChange={(e) => handleDateChange(e, "end")}
-        />
-
-        <div class="date-range-labels">
-          <span>{formatDateInput(startDate)}</span>
-          <span>{formatDateInput(endDate)}</span>
-        </div>
-
-        <div class="date-navigation">
-          <button on:click={() => shiftDateRange(-7)}>-1W</button>
-          <button on:click={() => shiftDateRange(-1)}>-1D</button>
-          <button class="play-button" on:click={togglePlayPause}>
-            {#if isPlaying}
-              ❚❚
-            {:else}
-              ▶
-            {/if}
-          </button>
-          <button on:click={() => shiftDateRange(1)}>+1D</button>
-          <button on:click={() => shiftDateRange(7)}>+1W</button>
-        </div>
+<!-- App Layout - Modern Minimalist Design -->
+<div class="app-container">
+  <!-- Compact Header -->
+  <header class="header">
+    <div class="title-row">
+      <h1 class="title">What Gets Corrected 👀</h1>
+      <div class="header-right">
+        <a href="https://github.com/wongpeiting/factually-semantic-map" target="_blank" rel="noopener noreferrer" class="help-btn" title="View on GitHub">?</a>
+        <span class="data-date">Data as of Feb 5, 2026.</span>
       </div>
     </div>
+    <p class="tagline">Mapping claims the Singapore government has publicly challenged on Factually.</p>
+    <p class="subtitle">
+      Each dot is a disputed claim, grouped by similarity. Together, they reveal themes most likely to prompt clarification and correction.
+    </p>
+  </header>
 
-    <div class="scatterplot-container">
+  <!-- Main visualization area with floating panels -->
+  <main class="main-content">
+    <!-- Scatterplot fills the entire area -->
+    <div class="scatterplot-wrapper">
       {#if filteredData.length}
         <Scatterplot
           data={filteredData}
@@ -748,444 +635,728 @@
           bind:selectedData
         />
       {:else if isLoading}
-        <div class="progress-wrap">
-          <div class="progress-header">
+        <div class="loading-overlay">
+          <div class="progress-wrap">
+            <div class="progress-header">
+              {#if loadPhase === "downloading"}
+                Downloading data...
+              {:else if loadPhase === "parsing"}
+                Processing...
+              {:else}
+                Loading...
+              {/if}
+            </div>
             {#if loadPhase === "downloading"}
-              Downloading CSV...
-            {:else if loadPhase === "parsing"}
-              Parsing CSV...
-            {:else}
-              Loading...
-            {/if}
-          </div>
-          {#if loadPhase === "downloading"}
-            {#if loadTotal}
-              <div class="progress-bar">
-                <div class="progress-fill" style="width: {loadProgress}%"></div>
-              </div>
-              <div class="progress-label">
-                {loadProgress}% ({formatBytes(loadBytes)} / {formatBytes(
-                  loadTotal,
-                )})
-              </div>
+              {#if loadTotal}
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: {loadProgress}%"></div>
+                </div>
+                <div class="progress-label">
+                  {loadProgress}% ({formatBytes(loadBytes)} / {formatBytes(loadTotal)})
+                </div>
+              {:else}
+                <div class="progress-bar indeterminate"></div>
+                <div class="progress-label">{formatBytes(loadBytes)}</div>
+              {/if}
             {:else}
               <div class="progress-bar indeterminate"></div>
-              <div class="progress-label">{formatBytes(loadBytes)}</div>
             {/if}
-          {:else}
-            <div class="progress-bar indeterminate"></div>
-          {/if}
+          </div>
         </div>
       {:else}
-        <p>Waiting for data</p>
+        <div class="loading-overlay">
+          <p class="waiting-text">Waiting for data...</p>
+        </div>
       {/if}
     </div>
 
-    <!-- Right Panel for Speech Details -->
-    <div class="detail-panel">
-      <DetailCard
-        hoveredData={displayedData}
-        {data}
-        {domainColumn}
-        {colorScale}
-        {searchQuery}
-        isPinned={!!selectedData}
-        on:unpin={() => selectedData = null}
-      />
-    </div>
-  </div>
+    <!-- Floating Filter Panel (Left) -->
+    <aside class="floating-panel filter-panel" class:collapsed={filterCollapsed}>
+      <button class="panel-toggle" on:click={() => filterCollapsed = !filterCollapsed} aria-label="Toggle filters">
+        {#if filterCollapsed}
+          <span class="toggle-arrow">›</span>
+        {:else}
+          <span class="toggle-arrow">‹</span>
+        {/if}
+      </button>
+
+      {#if !filterCollapsed}
+        <div class="panel-content">
+          <div class="panel-header">
+            <span class="panel-title">Filters</span>
+            <button class="reset-btn" on:click={resetFilters}>Reset</button>
+          </div>
+
+          <div class="filter-section">
+            <label class="filter-label" for="search-input">Search</label>
+            <input
+              id="search-input"
+              type="text"
+              class="filter-input"
+              placeholder="Search keywords..."
+              bind:value={searchQuery}
+              on:input={handleSearch}
+            />
+          </div>
+
+          {#if allowedDomainColumns.length}
+            <div class="filter-section">
+              <label class="filter-label" for="domain-column">Color by</label>
+              <select
+                id="domain-column"
+                class="filter-select"
+                on:change={handleDomainChange}
+                bind:value={domainColumn}
+              >
+                <option value="" disabled>Select column</option>
+                {#each allowedDomainColumns as column}
+                  <option value={column}>{columnLabels[column] || column}</option>
+                {/each}
+              </select>
+            </div>
+          {/if}
+
+          {#if uniqueValues.length}
+            <div class="filter-section">
+              <label class="filter-label" for="value-select">Highlight</label>
+              <select
+                id="value-select"
+                multiple
+                size="5"
+                class="filter-select multi-select"
+                on:change={handleSelectionChange}
+              >
+                <option value="__ALL__" selected={selectedValues.size === 0}>★ Show All</option>
+                {#each uniqueValues as item}
+                  <option value={item} selected={selectedValues.has(item)}>{formatValueLabel(item)}</option>
+                {/each}
+              </select>
+            </div>
+          {/if}
+
+          <div class="filter-section">
+            <label class="filter-label" for="opacity-slider">Opacity</label>
+            <input
+              id="opacity-slider"
+              type="range"
+              class="filter-range"
+              min="0.1"
+              max="1"
+              step="0.05"
+              bind:value={opacity}
+              on:input={handleOpacityChange}
+            />
+          </div>
+
+          <div class="filter-section date-section">
+            <span class="filter-label">Date range</span>
+            <div class="date-inputs">
+              <input
+                id="start-date"
+                type="date"
+                class="filter-input date-input"
+                value={formatDateInput(startDate)}
+                max={formatDateInput(maxDateFromData)}
+                on:change={(e) => handleDateChange(e, "start")}
+              />
+              <span class="date-separator">–</span>
+              <input
+                id="end-date"
+                type="date"
+                class="filter-input date-input"
+                value={formatDateInput(endDate)}
+                max={formatDateInput(maxDateFromData)}
+                on:change={(e) => handleDateChange(e, "end")}
+              />
+            </div>
+
+            <RangeSlider
+              min={0}
+              max={maxAllowedIndex}
+              bind:startValue={startDateIndex}
+              bind:endValue={endDateIndex}
+              markers={electionMarkers}
+              on:startChange={(e) => handleDateChange(e, "start")}
+              on:endChange={(e) => handleDateChange(e, "end")}
+            />
+
+            <div class="date-navigation">
+              <button class="nav-btn" on:click={() => shiftDateRange(-7)}>-1W</button>
+              <button class="nav-btn" on:click={() => shiftDateRange(-1)}>-1D</button>
+              <button class="nav-btn play-btn" on:click={togglePlayPause}>
+                {#if isPlaying}⏸{:else}▶{/if}
+              </button>
+              <button class="nav-btn" on:click={() => shiftDateRange(1)}>+1D</button>
+              <button class="nav-btn" on:click={() => shiftDateRange(7)}>+1W</button>
+            </div>
+          </div>
+
+          <details class="info-accordion">
+            <summary>About this map</summary>
+            <div class="info-content">
+              <p>
+                A semantic map shows how pieces of language relate to each other based on meaning. Each dot here represents a correction or clarification published on Factually.gov.sg. Dots with similar misinformation themes appear closer together. Explore patterns on the map by shortening the time range and scrubbing the timeline, or conducting a search.
+              </p>
+            </div>
+          </details>
+        </div>
+      {/if}
+    </aside>
+
+    <!-- Floating Detail Panel (Right) - only visible when data selected -->
+    <aside class="floating-panel detail-panel" class:visible={!!displayedData}>
+      {#if displayedData}
+        <button class="panel-close" on:click={() => selectedData = null} aria-label="Close">×</button>
+        <div class="panel-content">
+          <DetailCard
+            hoveredData={displayedData}
+            {data}
+            {domainColumn}
+            {colorScale}
+            {searchQuery}
+            isPinned={!!selectedData}
+            on:unpin={() => selectedData = null}
+          />
+        </div>
+      {/if}
+    </aside>
+
+    </main>
 </div>
 
 <style>
-  /* Make the overall page non-scrollable */
+  /* Modern Minimalist Styles */
   :global(html, body, #app) {
     height: 100%;
     overflow: hidden;
+    margin: 0;
+    padding: 0;
   }
 
-  .container {
-    padding: 1rem;
+  .app-container {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    font-family: "Inter", sans-serif;
-    height: 100%; /* fill viewport */
-    overflow: hidden; /* prevent page scroll */
-    box-sizing: border-box; /* include padding in height to avoid clipping */
+    height: 100vh;
+    background: var(--bg-canvas, #fafbfc);
+    overflow: hidden;
   }
 
-  .title-section {
-    text-align: center;
+  /* Compact Header */
+  .header {
+    padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem);
+    background: var(--bg-panel, rgba(255, 255, 255, 0.95));
+    border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+    flex-shrink: 0;
+  }
+
+  .title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
   }
 
   .title {
-    font-size: 2rem;
+    font-size: 2.5rem;
     font-weight: 700;
-    margin-bottom: 0.5rem;
+    color: var(--text-primary, #1a202c);
+    margin: 0;
+    letter-spacing: -0.02em;
   }
 
-  /* removed unused .subtitle style */
-
-  .content {
-    display: flex;
-    gap: 1.5rem;
-    align-items: flex-start; /* Align items at the top */
-    flex: 1; /* take remaining height below the title */
-    min-height: 0; /* allow children to shrink */
-    overflow: hidden; /* no page scroll from content */
-  }
-
-  .filter-panel {
-    background: #f9fafb;
-    padding: 1.5rem;
-    width: 300px;
+  .header-right {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    height: 100%; /* fill the content column height */
-    overflow: auto; /* panel itself scrolls */
-    box-sizing: border-box; /* keep padding within allotted height */
-    -webkit-overflow-scrolling: touch; /* smoother scrolling on macOS/iOS */
-    overscroll-behavior: contain; /* keep scroll events within the panel */
-  }
-
-  .detail-panel {
-    background: #f9fafb;
-    padding: 1.5rem;
-    width: 450px;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: auto;
-    box-sizing: border-box;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-  }
-
-  .filter-actions {
-    display: flex;
-    justify-content: flex-start;
-  }
-  .reset-btn {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.85rem;
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .reset-btn:hover {
-    background: #f7f7f7;
-  }
-
-  /* Only style top-level labels in the filter panel (avoid checkbox item labels) */
-  .filter-panel > label {
-    font-weight: 600;
-    font-size: 0.9rem;
-  }
-
-  .filter-panel input,
-  .filter-panel select {
-    padding: 0.5rem;
-    font-size: 0.9rem;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  /* removed checkbox styles after switching to multi-select */
-
-  .filter-panel input:focus,
-  .filter-panel select:focus {
-    outline: none;
-    border-color: #4c8bf5;
-  }
-
-  .multi-select {
-    min-height: 150px;
-    overflow-y: auto;
-    width: 100%;
-  }
-
-  .scatterplot-container {
-    flex: 1; /* take remaining width next to panel */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #fff;
-    border-radius: 10px;
-    height: 100%; /* fill vertical space in content */
-    min-height: 0; /* allow to shrink with viewport */
-    padding: 1rem;
-    /* box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05); */
-    box-sizing: border-box; /* ensure padding doesn't cause vertical overflow */
-  }
-
-  .date-controls label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-  }
-
-  .date-controls input[type="date"] {
-    margin-bottom: 0.5rem;
-  }
-
-  .date-range-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.85rem;
-    color: #444;
-  }
-
-  .date-navigation {
-    display: flex;
+    align-items: flex-end;
     gap: 0.5rem;
-    justify-content: space-between;
-  }
-
-  .date-navigation button {
-    flex: 1;
-    padding: 0.4rem;
-    font-size: 0.85rem;
-    background: #f0f0f0;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-  .play-button {
-    background: #4c8bf5;
-    color: white;
-    font-weight: bold;
-  }
-
-  .nerd-box {
-    background: #eef5ff;
-    border: 1px solid #4c8bf5;
-    padding: 1rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    line-height: 1.6;
-    margin-bottom: 1rem;
-  }
-
-  .nerd-box summary {
-    font-weight: bold;
-    cursor: pointer;
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    user-select: none;
-  }
-
-  .nerd-box summary:hover {
-    opacity: 0.8;
-  }
-
-  .nerd-box details[open] summary {
-    margin-bottom: 0.75rem;
-  }
-
-  .nerd-box-content p {
-    margin-bottom: 1rem;
-    color: #444;
-  }
-
-  .nerd-box-content ul {
-    list-style-type: disc; /* Add bullet points */
-    padding-left: 1.5rem; /* Indent the list */
-    margin-bottom: 1rem; /* Add spacing below the list */
-  }
-
-  .nerd-box-content li {
-    margin-bottom: 0.5rem; /* Add spacing between list items */
-    color: #444;
-  }
-
-  .info-box {
-    background: #eef5ff;
-    border: 1px solid #4c8bf5;
-    padding: 1rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    line-height: 1.6;
-    margin-bottom: 1rem;
-  }
-
-  .info-box summary {
-    font-weight: bold;
-    cursor: pointer;
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    user-select: none;
-  }
-
-  .info-box summary:hover {
-    opacity: 0.8;
-  }
-
-  .info-box details[open] summary {
-    margin-bottom: 0.75rem;
-  }
-
-  .info-box-content p {
-    margin-bottom: 0.75rem;
-    color: #444;
-  }
-
-  .info-box-content ul {
-    list-style-type: disc;
-    padding-left: 1.5rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .info-box-content li {
-    margin-bottom: 0.4rem;
-    color: #444;
-  }
-
-  .info-box-content strong {
-    color: #1565c0;
-  }
-
-  .info-box .toggle-icon {
-    background: rgba(76, 139, 245, 0.25);
-    color: #1565c0;
-  }
-
-  /* Toggle icon styling */
-  .toggle-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.1);
-    font-weight: bold;
-    font-size: 1.1rem;
-    line-height: 1;
     flex-shrink: 0;
-    transition: all 0.2s ease;
-    position: relative;
   }
 
-  .nerd-box .toggle-icon {
-    background: rgba(76, 139, 245, 0.25);
-    color: #1565c0;
+  .data-date {
+    font-size: 0.7rem;
+    color: var(--text-muted, #64748b);
+    white-space: nowrap;
   }
 
-  /* Hide the default + text and use ::after for dynamic content */
-  .toggle-icon {
-    font-size: 0;
-  }
-
-  .toggle-icon::after {
-    content: '+';
+  .tagline {
     font-size: 1.1rem;
-    font-weight: bold;
+    color: var(--text-primary, #1a202c);
+    margin: 0.5rem 0 0.25rem 0;
+    line-height: 1.5;
+    font-weight: 500;
   }
 
-  details[open] .toggle-icon::after {
-    content: '−';
+  .subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted, #64748b);
+    margin: 0;
+    line-height: 1.6;
   }
 
-  summary:hover .toggle-icon {
-    transform: scale(1.1);
+  /* Main Content Area */
+  .main-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
   }
 
-  /* Progress styles */
+  /* Scatterplot fills entire area */
+  .scatterplot-wrapper {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-canvas, #fafbfc);
+  }
+
+  /* Loading states */
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-canvas, #fafbfc);
+  }
+
+  .waiting-text {
+    color: var(--text-muted, #64748b);
+    font-size: 0.9rem;
+  }
+
   .progress-wrap {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    margin-bottom: 0.5rem;
+    gap: 0.5rem;
+    width: 280px;
   }
+
   .progress-header {
-    font-size: 0.9rem;
-    color: #333;
-    font-weight: 600;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary, #4a5568);
   }
+
   .progress-bar {
-    position: relative;
-    height: 8px;
-    background: #e5e7eb;
-    border-radius: 999px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 2px;
     overflow: hidden;
   }
+
   .progress-fill {
     height: 100%;
-    background: #4c8bf5;
-    width: 0%;
-    transition: width 120ms linear;
+    background: var(--accent, #3b82f6);
+    transition: width 100ms linear;
   }
+
+  .progress-bar.indeterminate {
+    position: relative;
+  }
+
   .progress-bar.indeterminate::before {
     content: "";
     position: absolute;
     left: -40%;
     width: 40%;
     height: 100%;
-    background: #4c8bf5;
-    animation: indet 1s infinite;
+    background: var(--accent, #3b82f6);
+    animation: indeterminate 1.2s ease-in-out infinite;
   }
 
-  #opacity-slider {
-    padding: 0em !important;
+  @keyframes indeterminate {
+    0% { left: -40%; }
+    100% { left: 100%; }
   }
 
-  @keyframes indet {
-    0% {
-      left: -40%;
-    }
-    50% {
-      left: 60%;
-    }
-    100% {
-      left: 100%;
-    }
-  }
   .progress-label {
+    font-size: 0.75rem;
+    color: var(--text-muted, #64748b);
+  }
+
+  /* Floating Panels */
+  .floating-panel {
+    position: absolute;
+    background: var(--bg-panel, rgba(255, 255, 255, 0.95));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: var(--radius-md, 12px);
+    box-shadow: var(--shadow-panel, 0 4px 24px rgba(0, 0, 0, 0.1));
+    z-index: 100;
+    transition: transform var(--transition-normal, 0.25s ease), opacity var(--transition-normal, 0.25s ease);
+  }
+
+  /* Filter Panel (Left) */
+  .filter-panel {
+    top: var(--spacing-md, 1rem);
+    left: var(--spacing-md, 1rem);
+    width: 280px;
+    max-height: calc(100% - 2rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .filter-panel.collapsed {
+    width: 48px;
+    min-height: 120px;
+  }
+
+  .filter-panel.collapsed .panel-toggle {
+    right: auto;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .panel-toggle {
+    position: absolute;
+    top: 50%;
+    right: -12px;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 48px;
+    border: none;
+    background: var(--bg-panel, rgba(255, 255, 255, 0.95));
+    border-radius: 0 var(--radius-sm, 6px) var(--radius-sm, 6px) 0;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: var(--text-muted, #64748b);
+    transition: color var(--transition-fast, 0.15s ease);
+  }
+
+  .panel-toggle:hover {
+    color: var(--text-primary, #1a202c);
+  }
+
+  .toggle-arrow {
+    font-weight: 600;
+  }
+
+  .filter-panel.collapsed .panel-toggle {
+    right: -36px;
+    border-radius: var(--radius-sm, 6px);
+  }
+
+  .panel-content {
+    padding: var(--spacing-md, 1rem);
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md, 1rem);
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: var(--spacing-sm, 0.5rem);
+    border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  }
+
+  .panel-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #64748b);
+  }
+
+  .reset-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: transparent;
+    border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+    border-radius: var(--radius-sm, 6px);
+    color: var(--text-secondary, #4a5568);
+    cursor: pointer;
+    transition: all var(--transition-fast, 0.15s ease);
+  }
+
+  .reset-btn:hover {
+    background: var(--accent-light, rgba(59, 130, 246, 0.1));
+    border-color: var(--accent, #3b82f6);
+    color: var(--accent, #3b82f6);
+  }
+
+  /* Filter Sections */
+  .filter-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs, 0.25rem);
+  }
+
+  .filter-label,
+  span.filter-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #64748b);
+    display: block;
+  }
+
+  .filter-input,
+  .filter-select {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+    border-radius: var(--radius-sm, 6px);
+    background: white;
+    color: var(--text-primary, #1a202c);
+    transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .filter-input:focus,
+  .filter-select:focus {
+    outline: none;
+    border-color: var(--accent, #3b82f6);
+    box-shadow: 0 0 0 3px var(--accent-light, rgba(59, 130, 246, 0.1));
+  }
+
+  .filter-input::placeholder {
+    color: var(--text-muted, #64748b);
+  }
+
+  .multi-select {
+    min-height: 120px;
+    max-height: 160px;
+  }
+
+  .filter-range {
+    width: 100%;
+    height: 4px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 2px;
+    cursor: pointer;
+  }
+
+  .filter-range::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent, #3b82f6);
+    cursor: pointer;
+    transition: transform var(--transition-fast, 0.15s ease);
+  }
+
+  .filter-range::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+  }
+
+  /* Date Section */
+  .date-section {
+    gap: var(--spacing-sm, 0.5rem);
+  }
+
+  .date-inputs {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs, 0.25rem);
+  }
+
+  .date-input {
+    flex: 1;
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .date-separator {
+    color: var(--text-muted, #64748b);
+    font-size: 0.875rem;
+  }
+
+  .date-navigation {
+    display: flex;
+    gap: 4px;
+    margin-top: var(--spacing-xs, 0.25rem);
+  }
+
+  .nav-btn {
+    flex: 1;
+    padding: 0.375rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: white;
+    border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+    border-radius: var(--radius-sm, 6px);
+    color: var(--text-secondary, #4a5568);
+    cursor: pointer;
+    transition: all var(--transition-fast, 0.15s ease);
+  }
+
+  .nav-btn:hover {
+    background: var(--accent-light, rgba(59, 130, 246, 0.1));
+    border-color: var(--accent, #3b82f6);
+    color: var(--accent, #3b82f6);
+  }
+
+  .play-btn {
+    background: var(--accent, #3b82f6);
+    border-color: var(--accent, #3b82f6);
+    color: white;
+  }
+
+  .play-btn:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: white;
+  }
+
+  /* Info Accordion */
+  .info-accordion {
+    margin-top: auto;
+    padding-top: var(--spacing-md, 1rem);
+    border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  }
+
+  .info-accordion summary {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+
+  .info-accordion summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .info-accordion summary::before {
+    content: "+ ";
+  }
+
+  .info-accordion[open] summary::before {
+    content: "− ";
+  }
+
+  .info-content {
+    margin-top: var(--spacing-sm, 0.5rem);
+  }
+
+  .info-content p {
     font-size: 0.8rem;
-    color: #555;
+    line-height: 1.6;
+    color: var(--text-secondary, #4a5568);
+    margin: 0;
   }
 
-  /* Mobile responsive styles */
+  /* Detail Panel (Right) */
+  .detail-panel {
+    top: var(--spacing-md, 1rem);
+    right: var(--spacing-md, 1rem);
+    width: 360px;
+    max-height: calc(100% - 2rem);
+    transform: translateX(calc(100% + 2rem));
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .detail-panel.visible {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .panel-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-sm, 6px);
+    cursor: pointer;
+    font-size: 1.25rem;
+    color: var(--text-muted, #64748b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast, 0.15s ease);
+    z-index: 10;
+  }
+
+  .panel-close:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-primary, #1a202c);
+  }
+
+  .detail-panel .panel-content {
+    padding: var(--spacing-md, 1rem);
+    padding-top: var(--spacing-lg, 1.5rem);
+  }
+
+  /* Help button */
+  .help-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-canvas, #fafbfc);
+    border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.12));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted, #64748b);
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+
+  .help-btn:hover {
+    background: var(--accent, #3b82f6);
+    color: white;
+    border-color: var(--accent, #3b82f6);
+  }
+
+  /* Responsive - Tablet */
   @media (max-width: 1024px) {
-    .content {
-      flex-direction: column;
-      overflow: auto;
+    .filter-panel {
+      width: 240px;
     }
 
-    .filter-panel,
     .detail-panel {
-      width: 100%;
-      height: auto;
-      max-height: none;
-      flex-shrink: 0;
+      width: 320px;
     }
 
-    .scatterplot-container {
-      min-height: 400px;
-      height: 50vh;
-      flex-shrink: 0;
+    .title {
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
     }
   }
 
+  /* Responsive - Mobile */
   @media (max-width: 768px) {
     :global(html, body, #app) {
       height: auto;
       overflow: auto;
     }
 
-    .container {
+    .app-container {
       height: auto;
-      overflow: auto;
-      padding: 0.75rem;
+      min-height: 100vh;
+    }
+
+    .header {
+      padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+    }
+
+    .title-row {
+      flex-wrap: wrap;
     }
 
     .title {
@@ -1193,50 +1364,129 @@
     }
 
     .subtitle {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
+      max-width: none;
     }
 
-    .content {
-      flex-direction: column;
-      gap: 1rem;
+    .main-content {
+      position: relative;
+      min-height: 0;
+      flex: none;
     }
 
-    .filter-panel,
-    .detail-panel {
+    .scatterplot-wrapper {
+      position: relative;
+      height: 55vh;
+      min-height: 300px;
+    }
+
+    /* Filter Panel becomes bottom sheet on mobile */
+    .filter-panel {
+      position: fixed;
+      top: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
       width: 100%;
-      padding: 1rem;
-      height: auto;
+      max-height: 60vh;
+      border-radius: var(--radius-lg, 16px) var(--radius-lg, 16px) 0 0;
+      transform: translateY(calc(100% - 48px));
+      z-index: 200;
     }
 
-    .scatterplot-container {
-      min-height: 350px;
-      height: 60vh;
-      order: -1; /* Show map first on mobile */
+    .filter-panel.collapsed {
+      width: 100%;
+      transform: translateY(calc(100% - 48px));
+    }
+
+    .filter-panel:not(.collapsed) {
+      transform: translateY(0);
+    }
+
+    .panel-toggle {
+      position: relative;
+      top: 0;
+      right: auto;
+      transform: none;
+      width: 100%;
+      height: 48px;
+      border-radius: var(--radius-lg, 16px) var(--radius-lg, 16px) 0 0;
+      box-shadow: none;
+      flex-shrink: 0;
+    }
+
+    .filter-panel.collapsed .panel-toggle {
+      right: auto;
+      border-radius: var(--radius-lg, 16px) var(--radius-lg, 16px) 0 0;
+    }
+
+    .toggle-arrow {
+      transform: rotate(-90deg);
+    }
+
+    .filter-panel:not(.collapsed) .toggle-arrow {
+      transform: rotate(90deg);
+    }
+
+    /* Detail Panel becomes bottom sheet on mobile */
+    .detail-panel {
+      position: fixed;
+      top: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      max-height: 50vh;
+      border-radius: var(--radius-lg, 16px) var(--radius-lg, 16px) 0 0;
+      transform: translateY(100%);
+      z-index: 250;
+    }
+
+    .detail-panel.visible {
+      transform: translateY(0);
     }
 
     .multi-select {
-      min-height: 120px;
+      min-height: 100px;
+      max-height: 120px;
     }
 
-    .date-navigation button {
-      padding: 0.3rem;
-      font-size: 0.75rem;
+    .date-input {
+      font-size: 0.7rem;
     }
   }
 
+  /* Responsive - Small Mobile */
   @media (max-width: 480px) {
+    .header {
+      padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+    }
+
     .title {
       font-size: 1.25rem;
     }
 
-    .scatterplot-container {
-      min-height: 300px;
-      height: 50vh;
+    .subtitle {
+      font-size: 0.75rem;
     }
 
-    .filter-panel,
-    .detail-panel {
-      padding: 0.75rem;
+    .scatterplot-wrapper {
+      height: 45vh;
+      min-height: 250px;
+    }
+
+    .panel-content {
+      padding: var(--spacing-sm, 0.5rem);
+    }
+
+    .filter-label {
+      font-size: 0.65rem;
+    }
+
+    .filter-input,
+    .filter-select {
+      font-size: 0.8rem;
+      padding: 0.375rem 0.5rem;
     }
   }
 </style>

@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import { scaleLinear, scaleOrdinal } from 'd3-scale';
     import { max, min } from 'd3-array';
-  import { schemeCategory10 } from 'd3-scale-chromatic';
+  import { schemeTableau10 } from 'd3-scale-chromatic';
   import { select, zoom, zoomIdentity } from 'd3';
 
   export let data = [];
@@ -34,7 +34,7 @@
     let containerWidth = 800;
     let containerHeight = 600;
 
-    const margin = { top: 40, right: 80, bottom: 40, left: 120 };
+    const margin = { top: 40, right: 400, bottom: 60, left: 320 };
     const radius = 10;
 
   let lastHoveredData = null;
@@ -123,7 +123,7 @@
     
     // Reactive color scale to follow domainColumn and uniqueValues changes
     let colorScale;
-    $: colorScale = scaleOrdinal(schemeCategory10)
+    $: colorScale = scaleOrdinal(schemeTableau10)
       .domain(domainColumn ? uniqueValues : []);
 
   // Precompute date bounds (used for defaults when needed)
@@ -196,13 +196,12 @@
         const colorKey = domainVal.includes(";") ? domainVal.split(";")[0].trim() : domainVal;
         ctx.fillStyle = colorScale(colorKey);
         // Opacity logic:
-        // - If isActive, use high opacity
-        // - Otherwise, use slider value
-        const activeAlpha = 0.9;
-        const inactiveAlpha = Math.max(0, Math.min(1, opacity));
-        ctx.globalAlpha = d.isActive ? activeAlpha : inactiveAlpha;
+        // - Active dots use slider value
+        // - Inactive dots are much fainter
+        const baseAlpha = Math.max(0.1, Math.min(1, opacity));
+        ctx.globalAlpha = d.isActive ? baseAlpha : baseAlpha * 0.15;
         ctx.fill();
-        ctx.globalAlpha = .2; // reset for next operations
+        ctx.globalAlpha = 1; // reset for next operations
       });
 
       // Draw cluster/region labels on the map
@@ -601,7 +600,7 @@
 
 <style>
     .chart-container {
-      position: relative; /* anchor for absolutely-positioned tooltip */
+      position: relative;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -609,11 +608,11 @@
       width: 100%;
       height: 100%;
     }
-  
+
     canvas {
       cursor: crosshair;
-      border-radius: 8px;
-      background-color: white;
+      border-radius: 0;
+      background-color: var(--bg-canvas, #fafbfc);
       width: 100%;
       height: 100%;
       display: block;
@@ -621,28 +620,56 @@
 
     .zoom-controls {
       position: absolute;
-      top: 12px;
-      left: 12px;
+      bottom: 16px;
+      right: 16px;
       display: flex;
-      flex-direction: column;
-      gap: 6px;
+      flex-direction: row;
+      gap: 4px;
       z-index: 20;
       pointer-events: auto;
     }
+
     .zoom-btn {
-      width: 34px;
-      height: 34px;
+      width: 32px;
+      height: 32px;
       border-radius: 6px;
-      border: 1px solid rgba(0,0,0,0.15);
-      background: rgba(255,255,255,0.95);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+      background: var(--bg-panel, rgba(255, 255, 255, 0.95));
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       cursor: pointer;
-      font-size: 18px;
+      font-size: 16px;
       line-height: 1;
       padding: 0;
+      color: var(--text-secondary, #4a5568);
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
+
     .zoom-btn:hover {
-      background: #fff;
+      background: white;
+      border-color: var(--accent, #3b82f6);
+      color: var(--accent, #3b82f6);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
-    
+
+    .zoom-btn:active {
+      transform: scale(0.95);
+    }
+
+    @media (max-width: 768px) {
+      .zoom-controls {
+        bottom: 12px;
+        right: 12px;
+      }
+
+      .zoom-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+      }
+    }
 </style>

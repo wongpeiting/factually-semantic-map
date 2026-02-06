@@ -1,7 +1,7 @@
 <script>
   import { onMount, createEventDispatcher } from 'svelte';
   import { scaleOrdinal } from 'd3-scale';
-  import { schemeCategory10 } from 'd3-scale-chromatic';
+  import { schemeTableau10 } from 'd3-scale-chromatic';
 
   const dispatch = createEventDispatcher();
 
@@ -93,7 +93,7 @@
       {/if}
     {/if}
     {#if hoveredData.summary}
-      <p class="summary"><strong>Summary:</strong> {@html highlightText(hoveredData.summary, searchQuery)}</p>
+      <p class="summary">{@html highlightText(hoveredData.summary, searchQuery)}</p>
     {/if}
     <p>{@html highlightText(hoveredData.text || hoveredData.article_text, searchQuery)}</p>
   {:else}
@@ -104,61 +104,70 @@
 <style>
   .detail-card {
     padding: 0;
-    border-radius: 8px;
-    background: #fff;
+    border-radius: 0;
+    background: transparent;
     height: 100%;
     overflow-y: auto;
     line-height: 1.5;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.875rem;
   }
 
-  h1,h2 {
+  h1, h2 {
     margin: 0;
     padding: 0;
-    font-weight: 300;
+    font-weight: 400;
   }
 
   h1 {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 600;
     line-height: 1.4;
+    color: var(--text-primary, #1a202c);
+    letter-spacing: -0.01em;
   }
 
   h2 {
-    font-size: 0.85rem;
+    font-size: 0.7rem;
+    font-weight: 500;
     text-transform: uppercase;
-    color: #555;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #64748b);
   }
 
   span {
-    padding: 4px 8px;
+    padding: 4px 10px;
     display: inline-block;
     vertical-align: bottom;
     border-radius: 4px;
     color: white;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 500;
     width: fit-content;
   }
 
   p {
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     font-weight: 400;
     margin: 0;
-    line-height: 1.6;
+    line-height: 1.7;
+    color: var(--text-secondary, #4a5568);
   }
 
   .placeholder-text {
-    color: #999;
-    font-style: italic;
+    color: var(--text-muted, #64748b);
+    font-style: normal;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 2rem 1rem;
   }
 
-  /* Yellow highlighting for search terms */
+  /* Highlighting for search terms */
   :global(.detail-card mark) {
-    background-color: yellow;
-    color: black;
-    padding: 0 2px;
+    background-color: rgba(59, 130, 246, 0.2);
+    color: inherit;
+    padding: 1px 3px;
     border-radius: 2px;
   }
 
@@ -166,70 +175,105 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem;
-    background: #e3f2fd;
+    padding: 0.5rem 0.75rem;
+    background: var(--accent-light, rgba(59, 130, 246, 0.1));
     border-radius: 6px;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
   }
 
   .pin-indicator {
-    font-size: 0.85rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    color: #1976d2;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--accent, #3b82f6);
   }
 
   .unpin-btn {
     background: transparent;
     border: none;
-    font-size: 1.2rem;
+    font-size: 1rem;
     cursor: pointer;
-    color: #666;
+    color: var(--text-muted, #64748b);
     padding: 0;
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 4px;
+    transition: all 0.15s ease;
   }
 
   .unpin-btn:hover {
-    background: rgba(0, 0, 0, 0.1);
-    color: #333;
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--text-primary, #1a202c);
   }
 
   /* Topic badge with main label and subtitle */
   .topic-badge {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 6px 10px;
+    gap: 1px;
+    padding: 5px 10px;
   }
 
   .topic-main {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     font-weight: 600;
     padding: 0;
     display: block;
   }
 
   .topic-sub {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 400;
-    opacity: 0.9;
+    opacity: 0.85;
     padding: 0;
     display: block;
   }
 
   .article-link {
-    font-size: 0.8rem;
-    color: #1976d2;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--accent, #3b82f6);
     text-decoration: none;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
     padding: 0;
+    transition: color 0.15s ease;
   }
 
   .article-link:hover {
+    color: #2563eb;
     text-decoration: underline;
+  }
+
+  .article-link::after {
+    content: "↗";
+    font-size: 0.7rem;
+  }
+
+  .summary {
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent, #3b82f6);
+  }
+
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 1.1rem;
+    }
+
+    p {
+      font-size: 0.8rem;
+      line-height: 1.6;
+    }
+
+    .placeholder-text {
+      padding: 1rem;
+    }
   }
 </style>

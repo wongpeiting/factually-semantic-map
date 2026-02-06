@@ -195,66 +195,71 @@
 <style>
   .range-slider {
     position: relative;
-    height: 30px;
-    padding: 10px 0;
+    height: 24px;
+    padding: 8px 0;
     width: 100%;
     user-select: none;
   }
-  
+
   .track {
     position: absolute;
     width: 100%;
-    height: 6px;
-    background: #ccc;
-    border-radius: 3px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 2px;
     top: 50%;
     transform: translateY(-50%);
   }
-  
+
   .track-inner {
     position: absolute;
     height: 100%;
-    background: #4c8bf5;
+    background: var(--accent, #3b82f6);
     left: var(--start-percent);
     right: calc(100% - var(--end-percent));
-    border-radius: 3px;
+    border-radius: 2px;
     cursor: grab;
+    transition: background 0.15s ease;
   }
-  
+
+  .track-inner:hover {
+    background: #2563eb;
+  }
+
   .track-inner:active {
     cursor: grabbing;
   }
-  
+
   .thumb {
     position: absolute;
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     background: white;
-    border: 2px solid #4c8bf5;
+    border: 2px solid var(--accent, #3b82f6);
     border-radius: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
     cursor: pointer;
     z-index: 2;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
-  
+
   .start-thumb {
     z-index: 3;
   }
-  
+
   .end-thumb {
     z-index: 3;
   }
-  
-  /* Hover states */
+
   .thumb:hover {
-    box-shadow: 0 0 0 3px rgba(76, 139, 245, 0.2);
+    transform: translate(-50%, -50%) scale(1.15);
+    box-shadow: 0 0 0 4px var(--accent-light, rgba(59, 130, 246, 0.15));
   }
-  
-  /* Focus states for accessibility */
+
   .thumb:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(76, 139, 245, 0.4);
+    box-shadow: 0 0 0 4px var(--accent-light, rgba(59, 130, 246, 0.25));
   }
 
   /* Election date markers */
@@ -267,20 +272,23 @@
   }
 
   .marker-line {
-    width: 2px;
-    height: 20px;
-    background: #e53935;
+    width: 1px;
+    height: 16px;
+    background: #ef4444;
     transform: translateY(-50%);
+    opacity: 0.7;
   }
 
   .marker-label {
     position: absolute;
-    top: 14px;
+    top: 12px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 0.65rem;
-    color: #e53935;
+    font-size: 0.55rem;
+    color: #ef4444;
     white-space: nowrap;
-    font-weight: 600;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 </style>
