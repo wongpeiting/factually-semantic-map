@@ -56,16 +56,6 @@ npm run build
 npm run deploy
 ```
 
-## Load Data from Different Sources
-
-You can control which CSV to load via URL parameters:
-
-1. **Full URL**: `?url=https://example.com/data.csv`
-2. **Filename + bucket**: `?filename=data.csv&bucket=my-bucket`
-3. **Filename only**: Uses default S3 bucket or falls back to `public/data.csv`
-
-Note: The CSV must be publicly readable and served with proper CORS headers.
-
 ## Credits
 
 Built with [Svelte](https://svelte.dev/), [D3.js](https://d3js.org/), and [Vite](https://vitejs.dev/).
