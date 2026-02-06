@@ -592,10 +592,9 @@
 <!-- App Layout -->
 <div class="container">
   <div class="title-section">
-    <h1 class="title">What's Being Fact-Checked?</h1>
+    <h1 class="title">What Gets Corrected</h1>
     <p class="subtitle">
-      Explore corrections and clarifications on Factually, the state-run webpage addressing falsehoods that have attracted enough public interest.
-      Dots closer together cover similar topics.
+      A semantic map of the claims the Singapore government has publicly challenged as of Feb 5, 2026. Each dot represents a disputed claim, grouped by linguistic similarity. Together, they reveal the themes most likely to prompt official clarification.
     </p>
   </div>
 
