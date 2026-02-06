@@ -1154,4 +1154,90 @@
     font-size: 0.8rem;
     color: #555;
   }
+
+  /* Mobile responsive styles */
+  @media (max-width: 1024px) {
+    .content {
+      flex-direction: column;
+      overflow: auto;
+    }
+
+    .filter-panel,
+    .detail-panel {
+      width: 100%;
+      height: auto;
+      max-height: none;
+      flex-shrink: 0;
+    }
+
+    .scatterplot-container {
+      min-height: 400px;
+      height: 50vh;
+      flex-shrink: 0;
+    }
+  }
+
+  @media (max-width: 768px) {
+    :global(html, body, #app) {
+      height: auto;
+      overflow: auto;
+    }
+
+    .container {
+      height: auto;
+      overflow: auto;
+      padding: 0.75rem;
+    }
+
+    .title {
+      font-size: 1.5rem;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+    }
+
+    .content {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .filter-panel,
+    .detail-panel {
+      width: 100%;
+      padding: 1rem;
+      height: auto;
+    }
+
+    .scatterplot-container {
+      min-height: 350px;
+      height: 60vh;
+      order: -1; /* Show map first on mobile */
+    }
+
+    .multi-select {
+      min-height: 120px;
+    }
+
+    .date-navigation button {
+      padding: 0.3rem;
+      font-size: 0.75rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .title {
+      font-size: 1.25rem;
+    }
+
+    .scatterplot-container {
+      min-height: 300px;
+      height: 50vh;
+    }
+
+    .filter-panel,
+    .detail-panel {
+      padding: 0.75rem;
+    }
+  }
 </style>
