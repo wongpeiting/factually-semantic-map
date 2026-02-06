@@ -88,18 +88,16 @@
   $: minDateFromData = allDates.length > 0 ? allDates[0] : null;
   $: maxDateFromData = allDates.length > 0 ? allDates[allDates.length - 1] : null;
 
-  // Allow topic, target, org, state, or category as color-by options (removed year since date slider exists)
+  // Allow target, org, or state as colour-by options
   $: allowedDomainColumns = columns.filter(
-    (c) => c === "topic" || c === "target" || c === "org" || c === "state" || c === "category",
+    (c) => c === "target" || c === "org" || c === "state",
   );
 
   // Display labels for column names
   const columnLabels = {
-    topic: "Broad category",
     target: "Directed at",
-    org: "Organization",
+    org: "Organisation",
     state: "State",
-    category: "Category",
   };
 
   // Strip "(Read: ...)" from topic labels for cleaner display
@@ -561,9 +559,9 @@
       isPlaying = false;
     }
 
-    // Reset domain to default ('topic' if available, then 'org', otherwise first allowed)
-    const defaultDomain = columns.includes("topic")
-      ? "topic"
+    // Reset domain to default ('target' if available, then 'org', otherwise first allowed)
+    const defaultDomain = columns.includes("target")
+      ? "target"
       : columns.includes("org")
       ? "org"
       : allowedDomainColumns[0] || "";
@@ -701,7 +699,7 @@
 
           {#if allowedDomainColumns.length}
             <div class="filter-section">
-              <label class="filter-label" for="domain-column">Color by</label>
+              <label class="filter-label" for="domain-column">Colour by</label>
               <select
                 id="domain-column"
                 class="filter-select"
