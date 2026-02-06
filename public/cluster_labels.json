@@ -30,19 +30,19 @@
     "count": 10
   },
   {
-    "label": "Housing (Read: HDB Prices)",
+    "label": "Housing (Read: HDB, Prices)",
     "x": 0.951582237,
     "y": 8.551911,
     "count": 10
   },
   {
-    "label": "Accountability (Read: Ridout)",
+    "label": "Accountability (Read: Ridout, Public Funds)",
     "x": 2.5459134461538464,
     "y": 7.64606953846154,
     "count": 13
   },
   {
-    "label": "Health (Read: Covid)",
+    "label": "Health (Read: Covid-19, Vaccines)",
     "x": 4.6944845950000005,
     "y": 4.432729609999999,
     "count": 20
