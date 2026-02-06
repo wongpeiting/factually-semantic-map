@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# CSV data files (except public/data.csv which is needed)
+*.csv
+!public/data.csv
+to-sync/
