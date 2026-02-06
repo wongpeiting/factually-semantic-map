@@ -27,4 +27,7 @@ dist-ssr
 # CSV data files (except public/data.csv which is needed)
 *.csv
 !public/data.csv
+
+# Local data and sync folders
+data/
 to-sync/
