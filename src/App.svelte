@@ -55,10 +55,10 @@
 
   let data = [],
     columns = [],
-    domainColumn = "org",
+    domainColumn = "target",
     uniqueValues = [];
   let selectedValues = new Set();
-  let opacity = 0.02,
+  let opacity = 0.15,
     startDate = null,
     endDate = null;
   let filteredData = [],
@@ -73,6 +73,7 @@
   let searchQuery = "";
   let showAnnotations = false;
   let hoveredData = null;
+  let clusterLabels = []; // Labels to show on map regions
   let selectedData = null; // Pinned/clicked data
 
   // Display selected data if available, otherwise show hovered data
@@ -86,10 +87,27 @@
   $: minDateFromData = allDates.length > 0 ? allDates[0] : null;
   $: maxDateFromData = allDates.length > 0 ? allDates[allDates.length - 1] : null;
 
-  // Only allow org or cluster as color-by options
+  // Allow topic, target, org, state, or category as color-by options (removed year since date slider exists)
   $: allowedDomainColumns = columns.filter(
-    (c) => c === "org" || c === "state",
+    (c) => c === "topic" || c === "target" || c === "org" || c === "state" || c === "category",
   );
+
+  // Display labels for column names
+  const columnLabels = {
+    topic: "Broad category",
+    target: "Directed at",
+    org: "Organization",
+    state: "State",
+    category: "Category",
+  };
+
+  // Strip "(Read: ...)" from topic labels for cleaner display
+  function formatValueLabel(val) {
+    if (!val) return val;
+    const str = String(val);
+    const match = str.match(/^(.+?)\s*\(Read:\s*.+?\)\s*$/);
+    return match ? match[1].trim() : str;
+  }
   $: {
     // Wait until columns are known before adjusting the selected domain
     if (!columns || columns.length === 0) {
@@ -103,6 +121,54 @@
       domainColumn = "";
     }
   }
+
+  // Update uniqueValues reactively when domainColumn or data changes
+  // Split semicolon-separated values into individual options (for multi-target articles)
+  // But keep "No target; ..." values intact
+  $: if (domainColumn && data.length > 0) {
+    uniqueValues = [
+      ...new Set(
+        data
+          .flatMap((d) => {
+            const val = d[domainColumn];
+            if (val === undefined || val === null || val === "") return [];
+            const strVal = String(val);
+            // Don't split "No target; ..." values - keep them intact
+            if (strVal.startsWith("No target;")) {
+              return [strVal];
+            }
+            // Split other semicolon-separated values
+            return strVal.includes(";")
+              ? strVal.split(";").map(v => v.trim())
+              : [strVal];
+          })
+      ),
+    ].sort((a, b) => String(a).localeCompare(String(b)));
+  }
+
+  // Election date markers for the slider
+  const electionDates = [
+    { date: new Date('2020-07-10'), label: 'GE2020' },
+    { date: new Date('2025-05-03'), label: 'GE2025' },
+  ];
+
+  // Calculate marker indices based on allDates array
+  $: electionMarkers = allDates.length > 0 ? electionDates
+    .map(ed => {
+      // Find the closest date index
+      let closestIndex = 0;
+      let closestDiff = Infinity;
+      allDates.forEach((d, i) => {
+        const diff = Math.abs(d.getTime() - ed.date.getTime());
+        if (diff < closestDiff) {
+          closestDiff = diff;
+          closestIndex = i;
+        }
+      });
+      return { index: closestIndex, label: ed.label };
+    })
+    .filter(m => m.index >= 0 && m.index <= allDates.length - 1)
+    : [];
 
   // Loading/progress state
   let isLoading = false;
@@ -134,6 +200,7 @@
 
       // Determine the final CSV URL once on mount
       resolvedDataUrl = resolveDataUrl();
+      console.log("Loading data from:", resolvedDataUrl);
 
       const response = await fetch(resolvedDataUrl, {
         mode: "cors",
@@ -176,6 +243,18 @@
       // Parse phase (indeterminate)
       loadPhase = "parsing";
       await Promise.resolve(parseCSV(csvText));
+
+      // Load cluster labels for map regions
+      try {
+        const labelsResponse = await fetch("cluster_labels.json");
+        if (labelsResponse.ok) {
+          clusterLabels = await labelsResponse.json();
+          console.log("Loaded cluster labels:", clusterLabels);
+        }
+      } catch (e) {
+        console.warn("Could not load cluster labels:", e);
+      }
+
       loadPhase = "idle";
     } catch (err) {
       console.error("Failed to load CSV:", err);
@@ -193,36 +272,45 @@
     const fullDateRange = allDates.length && startDateIndex === 0 && endDateIndex === allDates.length - 1;
     const hasSelection = selectedValues.size > 0 && selectedValues.size < uniqueValues.length;
     const hasSearch = searchQuery && searchQuery.trim().length > 0;
-    const anyFilterActive = !fullDateRange || hasSelection || hasSearch;
 
     filteredData = data.map((d) => {
       const inDateRange = (!startDate || d.date >= startDate) && (!endDate || d.date <= endDate);
-      const inSelection = hasSelection ? selectedValues.has(d[domainColumn]) : true;
+      // Check if any selected value matches (exact match OR contained in semicolon-separated list)
+      let inSelection = true;
+      if (hasSelection) {
+        const fieldValue = d[domainColumn] ?? "";
+        // For "No target; ..." values, only do exact match
+        // For others, also check if selected value is contained in semicolon-separated list
+        if (fieldValue.startsWith("No target;")) {
+          inSelection = selectedValues.has(fieldValue);
+        } else {
+          inSelection = selectedValues.has(fieldValue) ||
+            [...selectedValues].some(sv => fieldValue.includes(sv));
+        }
+      }
       let inSearch = true;
       if (hasSearch) {
         try {
           const regex = new RegExp(searchQuery, "i");
-          inSearch = regex.test(d.title ?? "") || regex.test(d.text ?? "");
+          inSearch = regex.test(d.title ?? "") || regex.test(d.text ?? "") || regex.test(d.article_text ?? "") || regex.test(d.summary ?? "");
         } catch {
-          inSearch = (d.title ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-                     (d.text ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+          const q = searchQuery.toLowerCase();
+          inSearch = (d.title ?? "").toLowerCase().includes(q) ||
+                     (d.text ?? "").toLowerCase().includes(q) ||
+                     (d.article_text ?? "").toLowerCase().includes(q) ||
+                     (d.summary ?? "").toLowerCase().includes(q);
         }
       }
-      let isActive = false;
-      let isHighlighted = false;
-      if (anyFilterActive) {
-        isActive = inDateRange && inSelection && inSearch;
-        isHighlighted = inDateRange && inSelection && inSearch;
-      } else {
-        isActive = false;
-        isHighlighted = false;
-      }
+      // Points are active if they pass all filters
+      // Date range always applies, selection and search only if active
+      const isActive = inDateRange && inSelection && inSearch;
       return {
         ...d,
         isActive,
-        isHighlighted,
+        isHighlighted: isActive,
       };
     });
+    console.log("filteredData length:", filteredData.length, "active:", filteredData.filter(d => d.isActive).length);
   }
 
   $: startPercent =
@@ -246,6 +334,10 @@
       csvText = lines.join("\n");
     }
     const result = Papa.parse(csvText, { header: true });
+    console.log("Parsed CSV fields:", result.meta.fields);
+    console.log("Parsed rows (before filter):", result.data.length);
+    console.log("Sample row:", result.data[0]);
+
     data = result.data
       .filter((d) => d.x && d.y && d.date)
       .map((d, i) => ({
@@ -255,6 +347,12 @@
         date: new Date(d.date),
         id: i,
       }));
+
+    console.log("Data after filter:", data.length);
+    console.log("Sample data point:", data[0]);
+    console.log("domainColumn:", domainColumn);
+    console.log("columns:", columns);
+    console.log("allDates:", allDates.length, "from", allDates[0], "to", allDates[allDates.length-1]);
 
     columns = result.meta.fields || [];
     allDates = [...new Set(data.map((d) => d.date.getTime()))]
@@ -294,11 +392,12 @@
       (o) => o.value,
     );
 
-    // Check if all values are selected
+    // Check if "All" is selected or if all values are selected
+    const hasAll = selectedOptions.includes("__ALL__");
     const allSelected = selectedOptions.length === uniqueValues.length;
 
-    if (allSelected || selectedOptions.length === 0) {
-      // If all values are selected or none are selected, clear the selection
+    if (hasAll || allSelected || selectedOptions.length === 0) {
+      // If "All" is selected, all values are selected, or none are selected, clear the selection
       selectedValues = new Set();
       highlightedData = [];
     } else {
@@ -454,8 +553,10 @@
       isPlaying = false;
     }
 
-    // Reset domain to default ('org' if available, otherwise first allowed)
-    const defaultDomain = columns.includes("org")
+    // Reset domain to default ('topic' if available, then 'org', otherwise first allowed)
+    const defaultDomain = columns.includes("topic")
+      ? "topic"
+      : columns.includes("org")
       ? "org"
       : allowedDomainColumns[0] || "";
     domainColumn = defaultDomain;
@@ -491,10 +592,10 @@
 <!-- App Layout -->
 <div class="container">
   <div class="title-section">
-    <h1 class="title">Semantic Map [DEMO]</h1>
+    <h1 class="title">What's Being Fact-Checked?</h1>
     <p class="subtitle">
-      Each dot represents an article. When the dots are closer together, the
-      articles are similar in meaning.
+      Explore corrections and clarifications on Factually, the state-run webpage addressing falsehoods that have attracted enough public interest.
+      Dots closer together cover similar topics.
     </p>
   </div>
 
@@ -510,67 +611,35 @@
           <summary><span class="toggle-icon">+</span> What is a Semantic Map?</summary>
           <div class="nerd-box-content">
             <p>
-              Semantic maps are tools that allow users to visually explore how
-              different topics and ideas are connected. By analyzing the
-              relationships between articles, these maps can reveal patterns and
-              clusters in the data.
+              This semantic map visualizes fact-check articles from Singapore's
+              Factually.gov.sg. Articles addressing similar misinformation themes
+              (e.g., COVID-19, political claims, economic policies) appear closer together.
             </p>
-            <p>Newsrooms can use semantic maps to:</p>
+            <p>Use this map to:</p>
             <ul>
               <li>
-                Audit their coverage by identifying themes that may be
-                underrepresented or overlooked.
+                Explore patterns in misinformation topics over time.
               </li>
-              <li>Track how their editorial focus evolves over time.</li>
+              <li>Identify recurring themes in false claims.</li>
               <li>
-                Discover which topics are being covered by other outlets,
-                offering opportunities to adjust their editorial focus or
-                collaborate.
+                Search for specific topics using keywords.
               </li>
             </ul>
           </div>
         </details>
       </div>
 
-      <label for="file-upload">📁 Upload CSV:</label>
-      <input
-        id="file-upload"
-        type="file"
-        accept=".csv"
-        on:change={handleFileUpload}
-      />
 
-      <div class="info-box">
-        <details>
-          <summary><span class="toggle-icon">+</span> CSV File Requirements</summary>
-          <div class="info-box-content">
-            <p>Your CSV file must include the following columns:</p>
-            <ul>
-              <li><strong>x, y</strong> - Numeric coordinates for positioning points on the scatterplot</li>
-              <li><strong>date</strong> - Date field for timeline filtering (ISO format recommended)</li>
-              <li><strong>title</strong> - Article headline or title (searchable)</li>
-              <li><strong>text</strong> - Article body or description (searchable)</li>
-              <li><strong>org or state</strong> - Categorical field for color-coding points (at least one required)</li>
-            </ul>
-            <p><strong>Optional columns:</strong></p>
-            <ul>
-              <li><strong>url, link, href, or permalink</strong> - Clickable link (Ctrl/Cmd + Click to open)</li>
-            </ul>
-            <p><em>Note: Column names are case-insensitive.</em></p>
-          </div>
-        </details>
-      </div>
-
-      <label for="search-input">🔍 Search Text (supports regex):</label>
+      <label for="search-input">🔍 Search:</label>
       <input
         id="search-input"
         type="text"
-        placeholder="Search or regex pattern..."
+        placeholder="Search keywords..."
         on:input={handleSearch}
       />
 
       {#if allowedDomainColumns.length}
-        <label for="domain-column">🎨 Color by Column:</label>
+        <label for="domain-column">🎨 Color by:</label>
         <select
           id="domain-column"
           on:change={handleDomainChange}
@@ -578,25 +647,26 @@
         >
           <option value="" disabled>Select column</option>
           {#each allowedDomainColumns as column}
-            <option value={column}>{column}</option>
+            <option value={column}>{columnLabels[column] || column}</option>
           {/each}
         </select>
       {/if}
 
       {#if uniqueValues.length}
         <label for="value-select"
-          >✨ Highlight Values (hold Shift/Cmd to select multiple):</label
+          >✨ Highlight Values:</label
         >
         <select
           id="value-select"
           multiple
-          size="5"
+          size="6"
           class="multi-select"
           on:change={handleSelectionChange}
         >
+          <option value="__ALL__" selected={selectedValues.size === 0}>— Show All —</option>
           {#each uniqueValues as item}
             <option value={item} selected={selectedValues.has(item)}
-              >{item}</option
+              >{formatValueLabel(item)}</option
             >
           {/each}
         </select>
@@ -635,6 +705,7 @@
           max={maxAllowedIndex}
           bind:startValue={startDateIndex}
           bind:endValue={endDateIndex}
+          markers={electionMarkers}
           on:startChange={(e) => handleDateChange(e, "start")}
           on:endChange={(e) => handleDateChange(e, "end")}
         />
@@ -673,6 +744,7 @@
           {startDate}
           {endDate}
           uniqueValues={uniqueValues}
+          {clusterLabels}
           bind:hoveredData
           bind:selectedData
         />

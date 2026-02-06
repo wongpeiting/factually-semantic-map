@@ -6,7 +6,7 @@
   import { select, zoom, zoomIdentity } from 'd3';
 
   export let data = [];
-  export let domainColumn = "";
+  export let domainColumn = "category";
   export let opacity = 1;
   export let selectedValues = new Set();
   export let searchQuery = "";
@@ -17,6 +17,7 @@
   export let uniqueValues = [];
   export let hoveredData = null; // Export hoveredData for binding
   export let selectedData = null; // Export selectedData for pinning
+  export let clusterLabels = []; // Labels to show on map regions
 
 
     // let annotations = [
@@ -33,8 +34,8 @@
     let containerWidth = 800;
     let containerHeight = 600;
 
-    const margin = { top: 20, right: 20, bottom: 20, left: 20 };
-    const radius = 6;
+    const margin = { top: 40, right: 80, bottom: 40, left: 120 };
+    const radius = 10;
 
   let lastHoveredData = null;
   let t = zoomIdentity; // d3-zoom transform
@@ -42,6 +43,43 @@
   const MAX_SCALE = 20;
     $: highlightedSet = new Set(highlightedData.map(d => d.id));
   $: uniqueDomainCount = new Set(data.map(d => d[domainColumn])).size;
+
+  // Jiggle animation state
+  let isJiggling = false;
+  let jiggleStartTime = 0;
+  let jiggleAnimationId = null;
+  const JIGGLE_DURATION = 800; // ms
+
+  // Watch for selectedValues changes to trigger jiggle
+  // Track the actual content, not just size, so switching between options triggers jiggle
+  let prevSelectedKey = "";
+  $: {
+    const currentKey = [...selectedValues].sort().join("|");
+    if (currentKey !== prevSelectedKey) {
+      prevSelectedKey = currentKey;
+      if (selectedValues.size > 0) {
+        startJiggle();
+      }
+    }
+  }
+
+  function startJiggle() {
+    isJiggling = true;
+    jiggleStartTime = performance.now();
+    if (jiggleAnimationId) cancelAnimationFrame(jiggleAnimationId);
+    animateJiggle();
+  }
+
+  function animateJiggle() {
+    const elapsed = performance.now() - jiggleStartTime;
+    if (elapsed < JIGGLE_DURATION) {
+      draw();
+      jiggleAnimationId = requestAnimationFrame(animateJiggle);
+    } else {
+      isJiggling = false;
+      draw();
+    }
+  }
 
   // d3-zoom behavior and selection to allow programmatic zooming
   let zoomBehavior;
@@ -113,6 +151,7 @@
     }
 
   function draw() {
+      console.log("Scatterplot draw() called, data.length:", data.length);
       if (!ctx || !data.length) return;
 
       ctx.clearRect(0, 0, containerWidth, containerHeight);
@@ -121,11 +160,41 @@
       ctx.translate(t.x, t.y);
       ctx.scale(t.k, t.k);
 
+      // Calculate jiggle offset if animating
+      let jiggleOffset = 0;
+      let jiggleScale = 1;
+      if (isJiggling) {
+        const elapsed = performance.now() - jiggleStartTime;
+        const progress = elapsed / JIGGLE_DURATION;
+        // Decaying oscillation: amplitude decreases over time
+        const decay = Math.max(0, 1 - progress);
+        // Multiple oscillations during the animation
+        const oscillation = Math.sin(progress * Math.PI * 8);
+        jiggleOffset = oscillation * decay * 4; // max 4 pixel offset
+        jiggleScale = 1 + oscillation * decay * 0.3; // max 30% size increase
+      }
+
       data.forEach(d => {
         // Use isActive and isHighlighted from filteredData
         ctx.beginPath();
-        ctx.arc(margin.left + xScale(d.x), margin.top + yScale(d.y), Math.max(0.5, radius / t.k), 0, Math.PI * 2);
-        ctx.fillStyle = colorScale(d[domainColumn]);
+
+        // Apply jiggle to active dots
+        let dotX = margin.left + xScale(d.x);
+        let dotY = margin.top + yScale(d.y);
+        let dotRadius = Math.max(0.5, radius / t.k);
+
+        if (isJiggling && d.isActive) {
+          // Add jiggle offset and scale for active dots
+          dotX += jiggleOffset / t.k;
+          dotY += (jiggleOffset * 0.5) / t.k; // Slight vertical movement too
+          dotRadius *= jiggleScale;
+        }
+
+        ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
+        // Handle semicolon-separated values by using the first value for color
+        const domainVal = d[domainColumn] || "";
+        const colorKey = domainVal.includes(";") ? domainVal.split(";")[0].trim() : domainVal;
+        ctx.fillStyle = colorScale(colorKey);
         // Opacity logic:
         // - If isActive, use high opacity
         // - Otherwise, use slider value
@@ -136,6 +205,47 @@
         ctx.globalAlpha = .2; // reset for next operations
       });
 
+      // Draw cluster/region labels on the map
+      if (clusterLabels && clusterLabels.length > 0) {
+        ctx.globalAlpha = 0.85;
+        ctx.textAlign = 'center';
+
+        clusterLabels.forEach(label => {
+          const screenX = margin.left + xScale(label.x);
+          const screenY = margin.top + yScale(label.y);
+
+          // Parse label to split main and "(Read: ...)" subtitle
+          const match = label.label.match(/^(.+?)\s*\(Read:\s*(.+?)\)\s*$/);
+          const mainText = match ? match[1].trim() : label.label;
+          const subText = match ? match[2].trim() : null;
+
+          // Draw main label (larger, bold)
+          const mainFontSize = Math.max(12, 15 / t.k);
+          ctx.font = `bold ${mainFontSize}px Arial`;
+          ctx.textBaseline = subText ? 'bottom' : 'middle';
+
+          // Draw text with white outline for readability
+          ctx.strokeStyle = 'white';
+          ctx.lineWidth = Math.max(2, 3 / t.k);
+          ctx.strokeText(mainText, screenX, screenY);
+          ctx.fillStyle = '#333';
+          ctx.fillText(mainText, screenX, screenY);
+
+          // Draw subtitle below (smaller)
+          if (subText) {
+            const subFontSize = Math.max(9, 11 / t.k);
+            ctx.font = `${subFontSize}px Arial`;
+            ctx.textBaseline = 'top';
+            const subY = screenY + 2 / t.k; // Small gap below main text
+
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = Math.max(1.5, 2.5 / t.k);
+            ctx.strokeText(subText, screenX, subY);
+            ctx.fillStyle = '#555';
+            ctx.fillText(subText, screenX, subY);
+          }
+        });
+      }
 
       // Draw annotations only if showAnnotations is true
       if (showAnnotations) {
@@ -304,10 +414,20 @@
         // Apply the same intersection logic for interactivity
         const hasSearch = !!(searchQuery && String(searchQuery).trim().length);
         const inSearch = hasSearch
-          ? (matchesSearchQuery(d.title ?? '', searchQuery) || matchesSearchQuery(d.text ?? '', searchQuery))
+          ? (matchesSearchQuery(d.title ?? '', searchQuery) || matchesSearchQuery(d.text ?? '', searchQuery) || matchesSearchQuery(d.article_text ?? '', searchQuery) || matchesSearchQuery(d.summary ?? '', searchQuery))
           : true;
         const hasSelection = selectedValues && selectedValues.size > 0 && selectedValues.size < uniqueDomainCount;
-        const inSelection = hasSelection ? selectedValues.has(d[domainColumn]) : true;
+        // Handle multi-target articles (semicolon-separated values)
+        const fieldValue = d[domainColumn] ?? "";
+        let inSelection = true;
+        if (hasSelection) {
+          if (fieldValue.startsWith("No target;")) {
+            inSelection = selectedValues.has(fieldValue);
+          } else {
+            inSelection = selectedValues.has(fieldValue) ||
+              [...selectedValues].some(sv => fieldValue.includes(sv));
+          }
+        }
         const inDateRange = (startDate && endDate)
           ? (d.date >= startDate && d.date <= endDate)
           : true;
@@ -349,10 +469,20 @@
         // Apply the same intersection logic for clicks
         const hasSearch = !!(searchQuery && String(searchQuery).trim().length);
         const inSearch = hasSearch
-          ? (matchesSearchQuery(d.title ?? '', searchQuery) || matchesSearchQuery(d.text ?? '', searchQuery))
+          ? (matchesSearchQuery(d.title ?? '', searchQuery) || matchesSearchQuery(d.text ?? '', searchQuery) || matchesSearchQuery(d.article_text ?? '', searchQuery) || matchesSearchQuery(d.summary ?? '', searchQuery))
           : true;
         const hasSelection = selectedValues && selectedValues.size > 0 && selectedValues.size < uniqueDomainCount;
-        const inSelection = hasSelection ? selectedValues.has(d[domainColumn]) : true;
+        // Handle multi-target articles (semicolon-separated values)
+        const fieldValue = d[domainColumn] ?? "";
+        let inSelection = true;
+        if (hasSelection) {
+          if (fieldValue.startsWith("No target;")) {
+            inSelection = selectedValues.has(fieldValue);
+          } else {
+            inSelection = selectedValues.has(fieldValue) ||
+              [...selectedValues].some(sv => fieldValue.includes(sv));
+          }
+        }
         const inDateRange = (startDate && endDate)
           ? (d.date >= startDate && d.date <= endDate)
           : true;
@@ -370,7 +500,7 @@
 
       // If Ctrl/Cmd is held, open URL in new tab (if available)
       if (event.ctrlKey || event.metaKey) {
-        const url = foundData.url || foundData.link || foundData.href || foundData.permalink;
+        const url = foundData.url || foundData.link || foundData.href || foundData.permalink || foundData.item_url;
         if (url && typeof window !== 'undefined') {
           window.open(url, '_blank', 'noopener,noreferrer');
         }
@@ -395,7 +525,9 @@
     
   let resizeObserver;
     onMount(() => {
+      console.log("Scatterplot mounted, canvas:", canvas);
       ctx = canvas.getContext('2d');
+      console.log("Canvas context:", ctx);
       setupCanvasDPI();
       // Observe size changes for responsiveness / DPR changes
       if (window.ResizeObserver) {
@@ -430,7 +562,7 @@
   // (Manual pan/zoom handlers removed in favor of d3-zoom)
     
     $: if (ctx) {
-        opacity, selectedValues, searchQuery, showAnnotations, domainColumn, startDate, endDate, selectedData; // Watch these props
+        opacity, selectedValues, searchQuery, showAnnotations, domainColumn, startDate, endDate, selectedData, clusterLabels; // Watch these props
         if (data.length) draw(); // Redraw when any of these change
     }
 

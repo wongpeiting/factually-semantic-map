@@ -1,11 +1,12 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  
+
   export let min = 0;
   export let max = 100;
   export let startValue;
   export let endValue;
-  
+  export let markers = []; // Array of { index, label } for important dates
+
   const dispatch = createEventDispatcher();
   
   let slider;
@@ -18,6 +19,12 @@
   
   $: startPercent = max > min ? ((startValue - min) / (max - min)) * 100 : 0;
   $: endPercent = max > min ? ((endValue - min) / (max - min)) * 100 : 100;
+
+  // Calculate marker positions
+  $: markerPositions = markers.map(m => ({
+    ...m,
+    percent: max > min ? ((m.index - min) / (max - min)) * 100 : 0
+  }));
   
   function handleMouseDown(event, thumb) {
     isDragging = true;
@@ -143,30 +150,42 @@
   }
 </script>
 
-<div 
-  class="range-slider" 
+<div
+  class="range-slider"
   bind:this={slider}
   style="--start-percent: {startPercent}%; --end-percent: {endPercent}%;"
 >
   <div class="track">
-    <div 
+    <div
       class="track-inner"
       on:mousedown={(e) => handleMouseDown(e, 'range')}
       on:touchstart={(e) => handleTouchStart(e, 'range')}
     ></div>
   </div>
-  
-  <div 
-    class="thumb start-thumb" 
+
+  <!-- Election date markers -->
+  {#each markerPositions as marker}
+    <div
+      class="marker"
+      style="left: {marker.percent}%"
+      title={marker.label}
+    >
+      <div class="marker-line"></div>
+      <div class="marker-label">{marker.label}</div>
+    </div>
+  {/each}
+
+  <div
+    class="thumb start-thumb"
     bind:this={startThumb}
     style="left: {startPercent}%"
     on:mousedown={(e) => handleMouseDown(e, 'start')}
     on:touchstart={(e) => handleTouchStart(e, 'start')}
   ></div>
-  
-  <div 
+
+  <div
     class="thumb end-thumb"
-    bind:this={endThumb} 
+    bind:this={endThumb}
     style="left: {endPercent}%"
     on:mousedown={(e) => handleMouseDown(e, 'end')}
     on:touchstart={(e) => handleTouchStart(e, 'end')}
@@ -236,5 +255,32 @@
   .thumb:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(76, 139, 245, 0.4);
+  }
+
+  /* Election date markers */
+  .marker {
+    position: absolute;
+    top: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .marker-line {
+    width: 2px;
+    height: 20px;
+    background: #e53935;
+    transform: translateY(-50%);
+  }
+
+  .marker-label {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    color: #e53935;
+    white-space: nowrap;
+    font-weight: 600;
   }
 </style>

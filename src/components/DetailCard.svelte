@@ -24,6 +24,25 @@
       colorScale.domain(data.map(d => d[domainColumn]));
   });
 
+  // Get first value from semicolon-separated string (for color lookup)
+  function getFirstValue(val) {
+    if (!val) return "";
+    const str = String(val);
+    return str.includes(";") ? str.split(";")[0].trim() : str;
+  }
+
+  // Parse topic to split main label and "Read:" subtitle
+  // e.g., "Justice (Read: Death Penalty)" -> { main: "Justice", sub: "Death Penalty" }
+  function parseTopicLabel(val) {
+    if (!val) return { main: "", sub: "" };
+    const str = String(val);
+    const match = str.match(/^(.+?)\s*\(Read:\s*(.+?)\)\s*$/);
+    if (match) {
+      return { main: match[1].trim(), sub: match[2].trim() };
+    }
+    return { main: str, sub: "" };
+  }
+
   // Function to highlight search terms in text
   function highlightText(text, query) {
     if (!query || !text) return text;
@@ -51,16 +70,27 @@
       </div>
     {/if}
     <h1>{@html highlightText(hoveredData.title, searchQuery)}</h1>
-    <span style="background: {colorScale(hoveredData[domainColumn])};">
-      {labelOverride ? labelOverride(domainColumn, hoveredData[domainColumn]) : hoveredData[domainColumn]}
-    </span>
+    {#if domainColumn === 'topic' && parseTopicLabel(hoveredData[domainColumn]).sub}
+      {@const parsed = parseTopicLabel(hoveredData[domainColumn])}
+      <span class="topic-badge" style="background: {colorScale(getFirstValue(hoveredData[domainColumn]))};">
+        <span class="topic-main">{parsed.main}</span>
+        <span class="topic-sub">{parsed.sub}</span>
+      </span>
+    {:else}
+      <span style="background: {colorScale(getFirstValue(hoveredData[domainColumn]))};">
+        {labelOverride ? labelOverride(domainColumn, hoveredData[domainColumn]) : hoveredData[domainColumn]}
+      </span>
+    {/if}
     <h2>{hoveredData.date.toISOString().split('T')[0]}</h2>
     {#if descriptionOverride}
       {#if descriptionOverride(domainColumn, hoveredData[domainColumn])}
         <p><em>{descriptionOverride(domainColumn, hoveredData[domainColumn])}</em></p>
       {/if}
     {/if}
-    <p>{@html highlightText(hoveredData.text, searchQuery)}</p>
+    {#if hoveredData.summary}
+      <p class="summary"><strong>Summary:</strong> {@html highlightText(hoveredData.summary, searchQuery)}</p>
+    {/if}
+    <p>{@html highlightText(hoveredData.text || hoveredData.article_text, searchQuery)}</p>
   {:else}
     <p class="placeholder-text">{isPinned ? 'Click on a circle to pin it here.' : 'Hover over a circle to see details here.'}</p>
   {/if}
@@ -161,5 +191,28 @@
   .unpin-btn:hover {
     background: rgba(0, 0, 0, 0.1);
     color: #333;
+  }
+
+  /* Topic badge with main label and subtitle */
+  .topic-badge {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+  }
+
+  .topic-main {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0;
+    display: block;
+  }
+
+  .topic-sub {
+    font-size: 0.65rem;
+    font-weight: 400;
+    opacity: 0.9;
+    padding: 0;
+    display: block;
   }
 </style>
