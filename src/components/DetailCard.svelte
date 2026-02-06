@@ -70,6 +70,11 @@
       </div>
     {/if}
     <h1>{@html highlightText(hoveredData.title, searchQuery)}</h1>
+    {#if hoveredData.url || hoveredData.link || hoveredData.href || hoveredData.permalink || hoveredData.item_url}
+      <a class="article-link" href={hoveredData.url || hoveredData.link || hoveredData.href || hoveredData.permalink || hoveredData.item_url} target="_blank" rel="noopener noreferrer">
+        View on Factually
+      </a>
+    {/if}
     {#if domainColumn === 'topic' && parseTopicLabel(hoveredData[domainColumn]).sub}
       {@const parsed = parseTopicLabel(hoveredData[domainColumn])}
       <span class="topic-badge" style="background: {colorScale(getFirstValue(hoveredData[domainColumn]))};">
@@ -214,5 +219,17 @@
     opacity: 0.9;
     padding: 0;
     display: block;
+  }
+
+  .article-link {
+    font-size: 0.8rem;
+    color: #1976d2;
+    text-decoration: none;
+    display: inline-block;
+    padding: 0;
+  }
+
+  .article-link:hover {
+    text-decoration: underline;
   }
 </style>
