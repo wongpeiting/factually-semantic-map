@@ -2,11 +2,11 @@
 
 A semantic map visualization of corrections and clarifications from [Factually.gov.sg](https://www.factually.gov.sg/), Singapore's state-run platform addressing online falsehoods.
 
-**Live demo:** https://wongpeiting.github.io/factually-semantic-map/
+**Link here:** https://wongpeiting.github.io/factually-semantic-map/
 
 ## About
 
-This interactive visualization maps 124 fact-check articles from Factually, allowing users to explore patterns in misinformation topics over time. Articles that cover similar themes are positioned closer together on the map, making it easy to identify clusters of related false claims.
+This interactive visualization maps 124 fact-check articles on Factually as of Feb 5, 2026, allowing users to explore patterns in misinformation flagged by the Singapore government over time. Articles that cover similar themes are positioned closer together on the map, making it easy to identify clusters of related false claims. 
 
 ### How It Works
 
@@ -18,11 +18,11 @@ This interactive visualization maps 124 fact-check articles from Factually, allo
    - Finance (CPF & Reserves)
    - Employment (Cost of Living, Foreigners)
    - Law & Order (Police)
-   - Housing (HDB Prices)
-   - Accountability (Ridout)
-   - Health (Covid)
+   - Housing (HDB, Prices)
+   - Accountability (Ridout, Public Funds)
+   - Health (Covid, Vaccines)
 
-4. **Target Tagging**: Each article is tagged with the individuals or organizations whose statements were corrected.
+4. **Target Tagging**: Each article is tagged with the individuals or groups whose statements were corrected.
 
 ### Features
 
@@ -34,7 +34,7 @@ This interactive visualization maps 124 fact-check articles from Factually, allo
 
 ## Data
 
-The dataset includes fact-checks from Factually.gov.sg covering the period from 2019 to 2025. Each article contains:
+The dataset includes corrections and clarifications from Factually.gov.sg covering the period from 2019 to 2025. Each row contains:
 - Title and summary
 - Full article text
 - Publication date
@@ -58,6 +58,6 @@ npm run deploy
 
 ## Credits
 
-Built with [Svelte](https://svelte.dev/), [D3.js](https://d3js.org/), and [Vite](https://vitejs.dev/).
+Built using the Tow Centre's semantic map template.
 
 Data source: [Factually.gov.sg](https://www.factually.gov.sg/)
