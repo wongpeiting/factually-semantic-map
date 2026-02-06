@@ -1258,6 +1258,8 @@
     transform: translateX(calc(100% + 2rem));
     opacity: 0;
     pointer-events: none;
+    display: flex;
+    flex-direction: column;
   }
 
   .detail-panel.visible {
@@ -1293,6 +1295,9 @@
   .detail-panel .panel-content {
     padding: var(--spacing-md, 1rem);
     padding-top: var(--spacing-lg, 1.5rem);
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
   }
 
   /* Help button */
