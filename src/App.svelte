@@ -1354,144 +1354,165 @@
     .app-container {
       height: auto;
       min-height: 100vh;
+      overflow: auto;
     }
 
     .header {
-      padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+      padding: 0.75rem 1rem;
+      position: relative;
     }
 
     .title-row {
-      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .header-right {
+      display: none;
+    }
+
+    .help-btn {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
     }
 
     .title {
-      font-size: 1.5rem;
+      font-size: 1.35rem;
+      line-height: 1.2;
+      padding-right: 40px;
+    }
+
+    .tagline {
+      font-size: 0.8rem;
+      margin: 0.5rem 0 0.25rem 0;
+      line-height: 1.4;
     }
 
     .subtitle {
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       max-width: none;
+      color: var(--text-muted, #64748b);
     }
 
     .main-content {
       position: relative;
+      display: flex;
+      flex-direction: column;
       min-height: 0;
-      flex: none;
     }
 
     .scatterplot-wrapper {
       position: relative;
-      height: 55vh;
-      min-height: 300px;
+      height: 50vh;
+      min-height: 280px;
+      flex-shrink: 0;
     }
 
-    /* Filter Panel becomes bottom sheet on mobile */
-    .filter-panel {
-      position: fixed;
+    /* Hide floating panels on mobile, show simple stacked layout */
+    .floating-panel {
+      position: relative;
       top: auto;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      left: auto;
+      right: auto;
+      bottom: auto;
       width: 100%;
-      max-height: 60vh;
-      border-radius: var(--radius-lg, 16px) var(--radius-lg, 16px) 0 0;
-      transform: translateY(calc(100% - 48px));
-      z-index: 200;
+      max-height: none;
+      border-radius: 0;
+      transform: none;
+      opacity: 1;
+      pointer-events: auto;
+      box-shadow: none;
+      border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+    }
+
+    .filter-panel {
+      order: 2;
     }
 
     .filter-panel.collapsed {
       width: 100%;
-      transform: translateY(calc(100% - 48px));
-    }
-
-    .filter-panel:not(.collapsed) {
-      transform: translateY(0);
     }
 
     .panel-toggle {
-      position: relative;
-      top: 0;
-      right: auto;
-      transform: none;
-      width: 100%;
-      height: 48px;
-      border-radius: var(--radius-lg, 16px) var(--radius-lg, 16px) 0 0;
-      box-shadow: none;
-      flex-shrink: 0;
-    }
-
-    .filter-panel.collapsed .panel-toggle {
-      right: auto;
-      border-radius: var(--radius-lg, 16px) var(--radius-lg, 16px) 0 0;
+      display: none !important;
     }
 
     .toggle-arrow {
-      transform: rotate(-90deg);
+      display: none;
     }
 
-    .filter-panel:not(.collapsed) .toggle-arrow {
-      transform: rotate(90deg);
-    }
-
-    /* Detail Panel becomes bottom sheet on mobile */
     .detail-panel {
-      position: fixed;
-      top: auto;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      width: 100%;
-      max-height: 50vh;
-      border-radius: var(--radius-lg, 16px) var(--radius-lg, 16px) 0 0;
-      transform: translateY(100%);
-      z-index: 250;
+      order: 3;
+      display: none;
     }
 
     .detail-panel.visible {
-      transform: translateY(0);
+      display: flex;
+    }
+
+    .panel-content {
+      padding: 1rem;
     }
 
     .multi-select {
-      min-height: 100px;
-      max-height: 120px;
+      min-height: 80px;
+      max-height: 100px;
     }
 
     .date-input {
-      font-size: 0.7rem;
+      font-size: 0.75rem;
+    }
+
+    .date-navigation {
+      flex-wrap: wrap;
+    }
+
+    .nav-btn {
+      min-width: 40px;
+    }
+
+    .info-accordion {
+      display: none;
     }
   }
 
   /* Responsive - Small Mobile */
   @media (max-width: 480px) {
     .header {
-      padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+      padding: 0.5rem 0.75rem;
     }
 
     .title {
-      font-size: 1.25rem;
+      font-size: 1.15rem;
+    }
+
+    .tagline {
+      font-size: 0.75rem;
     }
 
     .subtitle {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
     }
 
     .scatterplot-wrapper {
       height: 45vh;
-      min-height: 250px;
+      min-height: 240px;
     }
 
     .panel-content {
-      padding: var(--spacing-sm, 0.5rem);
+      padding: 0.75rem;
     }
 
     .filter-label {
-      font-size: 0.65rem;
+      font-size: 0.6rem;
     }
 
     .filter-input,
     .filter-select {
-      font-size: 0.8rem;
-      padding: 0.375rem 0.5rem;
+      font-size: 0.75rem;
+      padding: 0.35rem 0.5rem;
     }
   }
 </style>

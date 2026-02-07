@@ -204,8 +204,8 @@
         ctx.globalAlpha = 1; // reset for next operations
       });
 
-      // Draw cluster/region labels on the map
-      if (clusterLabels && clusterLabels.length > 0) {
+      // Draw cluster/region labels on the map (hide on small screens)
+      if (clusterLabels && clusterLabels.length > 0 && containerWidth > 600) {
         ctx.globalAlpha = 0.85;
         ctx.textAlign = 'center';
 
