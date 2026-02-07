@@ -705,7 +705,8 @@
 
     @media (max-width: 768px) {
       .zoom-controls {
-        bottom: 12px;
+        bottom: auto;
+        top: 12px;
         right: 12px;
       }
 

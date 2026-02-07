@@ -55,7 +55,7 @@
 
   let data = [],
     columns = [],
-    domainColumn = "target",
+    domainColumn = "topic",
     uniqueValues = [];
   let selectedValues = new Set();
   let opacity = 0.6,
@@ -67,6 +67,8 @@
   let endDateIndex = 0;
   let isPlaying = false;
   let playInterval = null;
+  let autoPlayStarted = false; // Track if auto-play has been initiated
+let autoPlayEnded = false; // Track if auto-play has finished
   let highlightedData = [];
   $: highlightedSet = new Set(highlightedData.map((d) => d.id));
 
@@ -80,6 +82,11 @@
   // Display selected data if available, otherwise show hovered data
   $: displayedData = selectedData || hoveredData;
 
+  // Stop auto-play when user pins a data point
+  $: if (selectedData) {
+    stopAutoPlay();
+  }
+
   // Color scale for the detail card
   $: colorScale = scaleOrdinal(schemeTableau10)
     .domain(domainColumn ? uniqueValues : []);
@@ -88,18 +95,19 @@
   $: minDateFromData = allDates.length > 0 ? allDates[0] : null;
   $: maxDateFromData = allDates.length > 0 ? allDates[allDates.length - 1] : null;
 
-  // Allow target, org, state, or pofma_ed as colour-by options
+  // Allow topic, target, org, state, or pofma_ed as colour-by options
   $: allowedDomainColumns = columns.filter(
-    (c) => c === "target" || c === "org" || c === "state" || c === "pofma_ed" || c === "directed_at",
+    (c) => c === "topic" || c === "target" || c === "org" || c === "state" || c === "pofma_ed" || c === "directed_at",
   );
 
   // Display labels for column names
   const columnLabels = {
-    target: "Directed at",
-    directed_at: "Directed at",
+    topic: "Broad themes",
+    target: "Targets",
+    directed_at: "Targets",
     org: "Organisation",
     state: "State",
-    pofma_ed: "POFMA ED",
+    pofma_ed: "POFMA or not",
   };
 
   // Strip "(Read: ...)" from topic labels for cleaner display
@@ -264,6 +272,15 @@
       }
 
       loadPhase = "idle";
+
+      // Auto-start timeline playback after data loads
+      // Small delay to let the visualization render first
+      setTimeout(() => {
+        if (!autoPlayStarted && allDates.length > 0) {
+          autoPlayStarted = true;
+          startAutoPlay();
+        }
+      }, 500);
     } catch (err) {
       console.error("Failed to load CSV:", err);
     } finally {
@@ -274,6 +291,48 @@
       if (playInterval) clearInterval(playInterval);
     };
   });
+
+  // Auto-play function - starts timeline animation automatically
+  function startAutoPlay() {
+    if (isPlaying) return; // Already playing
+
+    isPlaying = true;
+    showAnnotations = false;
+    autoPlayEnded = false;
+    playInterval = setInterval(() => {
+      if (endDateIndex >= allDates.length - 1) {
+        // Reached the end - stop playing
+        clearInterval(playInterval);
+        isPlaying = false;
+
+        // Pause for 1.5 seconds to let users digest, then reset to full timeline
+        setTimeout(() => {
+          startDateIndex = 0;
+          endDateIndex = allDates.length - 1;
+          updateSelectedDates(startDateIndex, endDateIndex, true);
+          autoPlayEnded = true; // Signal that auto-play finished
+        }, 1500);
+
+        return;
+      }
+      shiftDateRange(1);
+    }, 50); // 50ms per step - very fast sweep through timeline
+  }
+
+  // Stop auto-play when user interacts with filters
+  function stopAutoPlay() {
+    if (isPlaying && playInterval) {
+      clearInterval(playInterval);
+      isPlaying = false;
+    }
+  }
+
+  // Manual date navigation - stops auto-play first
+  function manualShiftDateRange(days) {
+    stopAutoPlay();
+    autoPlayEnded = false; // Hide hint when user interacts
+    shiftDateRange(days);
+  }
 
   $: {
     // Determine if any filter is active
@@ -367,10 +426,14 @@
       .sort((a, b) => a - b)
       .map((t) => new Date(t));
 
-    startDate = allDates[0];
-    endDate = allDates[allDates.length - 1];
+    // Set initial date range for auto-play effect
+    // Use ~15% of total data points as window size for a visible bar on the slider
+    const windowSize = Math.max(Math.floor(allDates.length * 0.15), 5);
+
     startDateIndex = 0;
-    endDateIndex = allDates.length - 1;
+    endDateIndex = Math.min(windowSize, allDates.length - 1);
+    startDate = allDates[startDateIndex];
+    endDate = allDates[endDateIndex];
     updateDateIndices();
 
     if (domainColumn) {
@@ -385,6 +448,7 @@
   }
 
   function handleDomainChange(event) {
+    stopAutoPlay(); // Stop auto-play on user interaction
     domainColumn = event.target.value;
     uniqueValues = domainColumn
       ? [...new Set(data.map((d) => d[domainColumn]).filter(Boolean))].sort(
@@ -396,6 +460,7 @@
   }
 
   function handleSelectionChange(event) {
+    stopAutoPlay(); // Stop auto-play on user interaction
     const selectedOptions = [...event.target.selectedOptions].map(
       (o) => o.value,
     );
@@ -466,6 +531,8 @@
   }
 
   function handleDateChange(e, type) {
+    stopAutoPlay(); // Stop auto-play on user interaction
+    autoPlayEnded = false; // Hide hint when user interacts
     if (e.detail !== undefined) {
       // Handle slider events
       if (type === "start") {
@@ -546,11 +613,13 @@
   }
 
   function handleSearch(event) {
+    stopAutoPlay(); // Stop auto-play on user interaction
     searchQuery = event.target.value;
     showAnnotations = false;
   }
 
   function handleOpacityChange() {
+    stopAutoPlay(); // Stop auto-play on user interaction
     showAnnotations = false;
   }
 
@@ -561,11 +630,11 @@
       isPlaying = false;
     }
 
-    // Reset domain to default ('target' if available, then 'org', otherwise first allowed)
-    const defaultDomain = columns.includes("target")
+    // Reset domain to default ('topic' if available, then 'target', otherwise first allowed)
+    const defaultDomain = columns.includes("topic")
+      ? "topic"
+      : columns.includes("target")
       ? "target"
-      : columns.includes("org")
-      ? "org"
       : allowedDomainColumns[0] || "";
     domainColumn = defaultDomain;
 
@@ -601,10 +670,11 @@
 <div class="app-container">
   <!-- Compact Header -->
   <header class="header">
+    <a href="https://github.com/wongpeiting/factually-semantic-map" target="_blank" rel="noopener noreferrer" class="help-btn mobile-only" title="View on GitHub">?</a>
     <div class="title-row">
       <h1 class="title">What Factually Moves to Correct 👀</h1>
       <div class="header-right">
-        <a href="https://github.com/wongpeiting/factually-semantic-map" target="_blank" rel="noopener noreferrer" class="help-btn" title="View on GitHub">?</a>
+        <a href="https://github.com/wongpeiting/factually-semantic-map" target="_blank" rel="noopener noreferrer" class="help-btn desktop-only" title="View on GitHub">?</a>
         <span class="data-date">Data as of Feb 5, 2026.</span>
       </div>
     </div>
@@ -687,6 +757,56 @@
             <button class="reset-btn" on:click={resetFilters}>Reset</button>
           </div>
 
+          <div class="filter-section date-section">
+            <span class="filter-label">Date range</span>
+            <div class="date-inputs">
+              <input
+                id="start-date"
+                type="date"
+                class="filter-input date-input"
+                value={formatDateInput(startDate)}
+                max={formatDateInput(maxDateFromData)}
+                on:change={(e) => handleDateChange(e, "start")}
+              />
+              <span class="date-separator">–</span>
+              <input
+                id="end-date"
+                type="date"
+                class="filter-input date-input"
+                value={formatDateInput(endDate)}
+                max={formatDateInput(maxDateFromData)}
+                on:change={(e) => handleDateChange(e, "end")}
+              />
+            </div>
+
+            <div class="slider-wrapper" class:pulse={autoPlayEnded}>
+              <RangeSlider
+                min={0}
+                max={maxAllowedIndex}
+                bind:startValue={startDateIndex}
+                bind:endValue={endDateIndex}
+                markers={electionMarkers}
+                on:dragstart={() => { stopAutoPlay(); autoPlayEnded = false; }}
+                on:startChange={(e) => handleDateChange(e, "start")}
+                on:endChange={(e) => handleDateChange(e, "end")}
+              />
+              {#if autoPlayEnded}
+                <div class="slider-hint desktop-hint">Hover over dots to review content.</div>
+                <div class="slider-hint mobile-hint">Tap on dots to view details.</div>
+              {/if}
+            </div>
+
+            <div class="date-navigation">
+              <button class="nav-btn" on:click={() => manualShiftDateRange(-7)}>-1W</button>
+              <button class="nav-btn" on:click={() => manualShiftDateRange(-1)}>-1D</button>
+              <button class="nav-btn play-btn" on:click={togglePlayPause}>
+                {#if isPlaying}⏸{:else}▶{/if}
+              </button>
+              <button class="nav-btn" on:click={() => manualShiftDateRange(1)}>+1D</button>
+              <button class="nav-btn" on:click={() => manualShiftDateRange(7)}>+1W</button>
+            </div>
+          </div>
+
           <div class="filter-section">
             <label class="filter-label" for="search-input">Search</label>
             <input
@@ -746,49 +866,6 @@
               bind:value={opacity}
               on:input={handleOpacityChange}
             />
-          </div>
-
-          <div class="filter-section date-section">
-            <span class="filter-label">Date range</span>
-            <div class="date-inputs">
-              <input
-                id="start-date"
-                type="date"
-                class="filter-input date-input"
-                value={formatDateInput(startDate)}
-                max={formatDateInput(maxDateFromData)}
-                on:change={(e) => handleDateChange(e, "start")}
-              />
-              <span class="date-separator">–</span>
-              <input
-                id="end-date"
-                type="date"
-                class="filter-input date-input"
-                value={formatDateInput(endDate)}
-                max={formatDateInput(maxDateFromData)}
-                on:change={(e) => handleDateChange(e, "end")}
-              />
-            </div>
-
-            <RangeSlider
-              min={0}
-              max={maxAllowedIndex}
-              bind:startValue={startDateIndex}
-              bind:endValue={endDateIndex}
-              markers={electionMarkers}
-              on:startChange={(e) => handleDateChange(e, "start")}
-              on:endChange={(e) => handleDateChange(e, "end")}
-            />
-
-            <div class="date-navigation">
-              <button class="nav-btn" on:click={() => shiftDateRange(-7)}>-1W</button>
-              <button class="nav-btn" on:click={() => shiftDateRange(-1)}>-1D</button>
-              <button class="nav-btn play-btn" on:click={togglePlayPause}>
-                {#if isPlaying}⏸{:else}▶{/if}
-              </button>
-              <button class="nav-btn" on:click={() => shiftDateRange(1)}>+1D</button>
-              <button class="nav-btn" on:click={() => shiftDateRange(7)}>+1W</button>
-            </div>
           </div>
 
           <details class="info-accordion">
@@ -1076,7 +1153,8 @@
     transition: all var(--transition-fast, 0.15s ease);
   }
 
-  .reset-btn:hover {
+  .reset-btn:hover,
+  .reset-btn:active {
     background: var(--accent-light, rgba(59, 130, 246, 0.1));
     border-color: var(--accent, #3b82f6);
     color: var(--accent, #3b82f6);
@@ -1153,6 +1231,42 @@
     transform: scale(1.15);
   }
 
+  /* Slider wrapper with hint */
+  .slider-wrapper {
+    position: relative;
+  }
+
+  .slider-wrapper.pulse :global(.track-inner) {
+    animation: pulse-glow 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+    50% { box-shadow: 0 0 8px 2px rgba(59, 130, 246, 0.6); }
+  }
+
+  .slider-hint {
+    text-align: center;
+    font-size: 0.65rem;
+    color: var(--accent, #3b82f6);
+    margin-top: 0.25rem;
+    animation: fade-in 0.5s ease-out;
+    font-weight: 500;
+  }
+
+  .slider-hint.mobile-hint {
+    display: none;
+  }
+
+  .slider-hint.desktop-hint {
+    display: block;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   /* Date Section */
   .date-section {
     gap: var(--spacing-sm, 0.5rem);
@@ -1194,7 +1308,8 @@
     transition: all var(--transition-fast, 0.15s ease);
   }
 
-  .nav-btn:hover {
+  .nav-btn:hover,
+  .nav-btn:active {
     background: var(--accent-light, rgba(59, 130, 246, 0.1));
     border-color: var(--accent, #3b82f6);
     color: var(--accent, #3b82f6);
@@ -1325,6 +1440,20 @@
     border-color: var(--accent, #3b82f6);
   }
 
+  /* Mobile help button is absolutely positioned, hidden on desktop */
+  .help-btn.mobile-only {
+    display: none;
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 10;
+  }
+
+  /* Desktop help button is hidden on mobile */
+  .help-btn.desktop-only {
+    display: flex;
+  }
+
   /* Responsive - Tablet */
   @media (max-width: 1024px) {
     .filter-panel {
@@ -1372,10 +1501,22 @@
       display: none;
     }
 
-    .help-btn {
-      position: absolute;
-      top: 0.75rem;
-      right: 0.75rem;
+    /* Show mobile help button, hide desktop one */
+    .help-btn.mobile-only {
+      display: flex;
+    }
+
+    .help-btn.desktop-only {
+      display: none;
+    }
+
+    /* Show mobile hint, hide desktop hint */
+    .slider-hint.mobile-hint {
+      display: block;
+    }
+
+    .slider-hint.desktop-hint {
+      display: none;
     }
 
     .title {
@@ -1436,24 +1577,45 @@
     }
 
     .panel-toggle {
-      display: none !important;
+      display: flex !important;
+      position: static;
+      width: 100%;
+      height: 32px;
+      border-radius: 0;
+      box-shadow: none;
+      border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+      justify-content: center;
     }
 
     .toggle-arrow {
+      transform: rotate(90deg);
+      transition: transform 0.2s ease;
+    }
+
+    .filter-panel.collapsed .toggle-arrow {
+      transform: rotate(-90deg);
+    }
+
+    .filter-panel.collapsed {
+      width: 100%;
+    }
+
+    .filter-panel.collapsed .panel-content {
       display: none;
     }
 
     .detail-panel {
       order: 3;
-      display: none;
-      transform: none;
-      opacity: 1;
-      max-height: 40vh;
+      transform: translateY(100%);
+      opacity: 0;
+      max-height: 50vh;
       overflow-y: auto;
+      transition: transform 0.3s ease, opacity 0.3s ease;
     }
 
     .detail-panel.visible {
-      display: block;
+      transform: translateY(0);
+      opacity: 1;
     }
 
     .panel-content {

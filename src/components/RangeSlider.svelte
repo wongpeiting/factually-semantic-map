@@ -30,12 +30,15 @@
     isDragging = true;
     currentThumb = thumb;
     sliderRect = slider.getBoundingClientRect();
-    
+
+    // Notify parent that dragging started (so it can stop auto-play)
+    dispatch('dragstart');
+
     if (thumb === 'range') {
       // Store the width of the range for maintaining during drag
       rangeWidth = endValue - startValue;
     }
-    
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
   }
@@ -92,11 +95,14 @@
     isDragging = true;
     currentThumb = thumb;
     sliderRect = slider.getBoundingClientRect();
-    
+
+    // Notify parent that dragging started (so it can stop auto-play)
+    dispatch('dragstart');
+
     if (thumb === 'range') {
       rangeWidth = endValue - startValue;
     }
-    
+
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd);
   }
