@@ -70,11 +70,21 @@
       </div>
     {/if}
     <h1>{@html highlightText(hoveredData.title, searchQuery)}</h1>
-    {#if hoveredData.url || hoveredData.link || hoveredData.href || hoveredData.permalink || hoveredData.item_url}
-      <a class="article-link" href={hoveredData.url || hoveredData.link || hoveredData.href || hoveredData.permalink || hoveredData.item_url} target="_blank" rel="noopener noreferrer">
-        View on Factually
-      </a>
-    {/if}
+    <div class="meta-row">
+      <div class="meta-links">
+        {#if hoveredData.url || hoveredData.link || hoveredData.href || hoveredData.permalink || hoveredData.item_url}
+          <a class="article-link" href={hoveredData.url || hoveredData.link || hoveredData.href || hoveredData.permalink || hoveredData.item_url} target="_blank" rel="noopener noreferrer">
+            View on Factually
+          </a>
+        {/if}
+        {#if hoveredData.pofma_link}
+          <a class="article-link" href={hoveredData.pofma_link} target="_blank" rel="noopener noreferrer">
+            View POFMA release
+          </a>
+        {/if}
+      </div>
+      <span class="article-date">{hoveredData.date.toISOString().split('T')[0]}</span>
+    </div>
     {#if domainColumn === 'topic' && parseTopicLabel(hoveredData[domainColumn]).sub}
       {@const parsed = parseTopicLabel(hoveredData[domainColumn])}
       <span class="topic-badge" style="background: {colorScale(getFirstValue(hoveredData[domainColumn]))};">
@@ -86,7 +96,6 @@
         {labelOverride ? labelOverride(domainColumn, hoveredData[domainColumn]) : hoveredData[domainColumn]}
       </span>
     {/if}
-    <h2>{hoveredData.date.toISOString().split('T')[0]}</h2>
     {#if descriptionOverride}
       {#if descriptionOverride(domainColumn, hoveredData[domainColumn])}
         <p><em>{descriptionOverride(domainColumn, hoveredData[domainColumn])}</em></p>
@@ -114,26 +123,14 @@
     gap: 0.875rem;
   }
 
-  h1, h2 {
+  h1 {
     margin: 0;
     padding: 0;
-    font-weight: 400;
-  }
-
-  h1 {
     font-size: 1.2rem;
     font-weight: 600;
     line-height: 1.4;
     color: var(--text-primary, #1a202c);
     letter-spacing: -0.01em;
-  }
-
-  h2 {
-    font-size: 0.7rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted, #64748b);
   }
 
   span {
@@ -233,6 +230,17 @@
     display: block;
   }
 
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .meta-links {
+    display: flex;
+    gap: 1rem;
+  }
+
   .article-link {
     font-size: 0.75rem;
     font-weight: 500;
@@ -253,6 +261,14 @@
   .article-link::after {
     content: "↗";
     font-size: 0.7rem;
+  }
+
+  .article-date {
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted, #64748b);
   }
 
   .summary {

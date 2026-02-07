@@ -58,7 +58,7 @@
     domainColumn = "target",
     uniqueValues = [];
   let selectedValues = new Set();
-  let opacity = 0.85,
+  let opacity = 0.6,
     startDate = null,
     endDate = null;
   let filteredData = [],
@@ -88,16 +88,18 @@
   $: minDateFromData = allDates.length > 0 ? allDates[0] : null;
   $: maxDateFromData = allDates.length > 0 ? allDates[allDates.length - 1] : null;
 
-  // Allow target, org, or state as colour-by options
+  // Allow target, org, state, or pofma_ed as colour-by options
   $: allowedDomainColumns = columns.filter(
-    (c) => c === "target" || c === "org" || c === "state",
+    (c) => c === "target" || c === "org" || c === "state" || c === "pofma_ed" || c === "directed_at",
   );
 
   // Display labels for column names
   const columnLabels = {
     target: "Directed at",
+    directed_at: "Directed at",
     org: "Organisation",
     state: "State",
+    pofma_ed: "POFMA ED",
   };
 
   // Strip "(Read: ...)" from topic labels for cleaner display
@@ -600,15 +602,15 @@
   <!-- Compact Header -->
   <header class="header">
     <div class="title-row">
-      <h1 class="title">What Gets Corrected 👀</h1>
+      <h1 class="title">What Factually Moves to Correct 👀</h1>
       <div class="header-right">
         <a href="https://github.com/wongpeiting/factually-semantic-map" target="_blank" rel="noopener noreferrer" class="help-btn" title="View on GitHub">?</a>
         <span class="data-date">Data as of Feb 5, 2026.</span>
       </div>
     </div>
-    <p class="tagline">Mapping claims the Singapore government has publicly challenged on Factually.</p>
+    <p class="tagline">Drawing on cases published on Factually — Singapore's state-run fact-checking site used alongside the Protection from Online Falsehoods and Manipulation Act (POFMA) — this semantic map shows how government-identified falsehoods cluster.</p>
     <p class="subtitle">
-      Each dot is a disputed claim, grouped by similarity. Together, they reveal themes most likely to prompt clarification and correction.
+      Each dot represents a disputed claim, revealing where official corrections concentrate.
     </p>
   </header>
 
