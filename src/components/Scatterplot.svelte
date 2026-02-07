@@ -526,6 +526,33 @@
       hoveredData = lastHoveredData;
       draw();
     }
+
+    // Handle touch taps on mobile
+    function handleTouchTap(event) {
+      if (event.changedTouches && event.changedTouches.length > 0) {
+        const touch = event.changedTouches[0];
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = containerWidth / rect.width;
+        const scaleY = containerHeight / rect.height;
+        const mouseX = (touch.clientX - rect.left) * scaleX;
+        const mouseY = (touch.clientY - rect.top) * scaleY;
+        const [adjustedX, adjustedY] = t.invert([mouseX, mouseY]);
+
+        const foundData = data.find(d => {
+          const worldX = margin.left + xScale(d.x);
+          const worldY = margin.top + yScale(d.y);
+          const dx = worldX - adjustedX;
+          const dy = worldY - adjustedY;
+          const isInRange = Math.sqrt(dx * dx + dy * dy) < (radius + 5) / t.k;
+          return isInRange && d.isActive;
+        });
+
+        if (foundData) {
+          selectedData = foundData;
+          draw();
+        }
+      }
+    }
     
   let resizeObserver;
     onMount(() => {
@@ -557,6 +584,16 @@
         });
   canvasSel = select(canvas);
   canvasSel.call(zoomBehavior);
+
+      // Set initial zoom for mobile (more zoomed in)
+      if (containerWidth < 600) {
+        const initialScale = 1.5;
+        const cx = containerWidth / 2;
+        const cy = containerHeight / 2;
+        const initialTransform = zoomIdentity.translate(cx * (1 - initialScale), cy * (1 - initialScale)).scale(initialScale);
+        canvasSel.call(zoomBehavior.transform, initialTransform);
+      }
+
       draw();
       return () => {
         if (resizeObserver) resizeObserver.disconnect();
@@ -600,6 +637,7 @@
       on:mousemove={handleMouseMove}
       on:mouseleave={handleMouseLeave}
       on:click={handleClick}
+      on:touchend={handleTouchTap}
     ></canvas>
 </div>
 
