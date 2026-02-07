@@ -95,9 +95,9 @@ let autoPlayEnded = false; // Track if auto-play has finished
   $: minDateFromData = allDates.length > 0 ? allDates[0] : null;
   $: maxDateFromData = allDates.length > 0 ? allDates[allDates.length - 1] : null;
 
-  // Allow topic, target, org, state, or pofma_ed as colour-by options
+  // Allow topic, target, org, state as colour-by options
   $: allowedDomainColumns = columns.filter(
-    (c) => c === "topic" || c === "target" || c === "org" || c === "state" || c === "pofma_ed" || c === "directed_at",
+    (c) => c === "topic" || c === "target" || c === "org" || c === "state" || c === "directed_at",
   );
 
   // Display labels for column names
@@ -107,7 +107,6 @@ let autoPlayEnded = false; // Track if auto-play has finished
     directed_at: "Targets",
     org: "Organisation",
     state: "State",
-    pofma_ed: "POFMA or not",
   };
 
   // Strip "(Read: ...)" from topic labels for cleaner display

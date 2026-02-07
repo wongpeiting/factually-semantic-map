@@ -77,11 +77,6 @@
             View on Factually
           </a>
         {/if}
-        {#if hoveredData.pofma_link}
-          <a class="article-link" href={hoveredData.pofma_link} target="_blank" rel="noopener noreferrer">
-            View POFMA release
-          </a>
-        {/if}
       </div>
       <span class="article-date">{hoveredData.date.toISOString().split('T')[0]}</span>
     </div>
