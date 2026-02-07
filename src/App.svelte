@@ -207,6 +207,9 @@ let autoPlayEnded = false; // Track if auto-play has finished
   }
 
   onMount(async () => {
+    // Ensure page starts at top on mobile
+    window.scrollTo(0, 0);
+
     try {
       isLoading = true;
       loadPhase = "downloading";
@@ -1606,16 +1609,13 @@ let autoPlayEnded = false; // Track if auto-play has finished
 
     .detail-panel {
       order: 3;
-      transform: translateY(100%);
-      opacity: 0;
+      display: none;
       max-height: 50vh;
       overflow-y: auto;
-      transition: transform 0.3s ease, opacity 0.3s ease;
     }
 
     .detail-panel.visible {
-      transform: translateY(0);
-      opacity: 1;
+      display: block;
     }
 
     .panel-content {
