@@ -279,17 +279,76 @@
   }
 
   @media (max-width: 768px) {
+    .detail-card {
+      gap: 1rem;
+    }
+
     h1 {
-      font-size: 1.1rem;
+      font-size: 1.25rem;
+      line-height: 1.5;
     }
 
     p {
+      font-size: 0.95rem;
+      line-height: 1.75;
+    }
+
+    span {
       font-size: 0.8rem;
-      line-height: 1.6;
+      padding: 6px 12px;
+    }
+
+    .topic-main {
+      font-size: 0.8rem;
+    }
+
+    .topic-sub {
+      font-size: 0.65rem;
+    }
+
+    .meta-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .meta-links {
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .article-link {
+      font-size: 0.85rem;
+      padding: 0.5rem 0;
+    }
+
+    .article-date {
+      font-size: 0.75rem;
+    }
+
+    .summary {
+      padding: 1rem;
+      font-size: 0.95rem;
+      line-height: 1.75;
     }
 
     .placeholder-text {
-      padding: 1rem;
+      padding: 2rem 1rem;
+      font-size: 0.95rem;
+    }
+
+    .pin-header {
+      padding: 0.75rem 1rem;
+    }
+
+    .pin-indicator {
+      font-size: 0.75rem;
+    }
+
+    .unpin-btn {
+      width: 28px;
+      height: 28px;
+      font-size: 1.1rem;
     }
   }
 </style>

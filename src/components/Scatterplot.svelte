@@ -34,12 +34,25 @@
     let containerWidth = 800;
     let containerHeight = 600;
 
-    const margin = { top: 40, right: 400, bottom: 60, left: 320 };
+    // Responsive margins - smaller on mobile to fit all dots
+    let margin = { top: 40, right: 400, bottom: 60, left: 320 };
+    $: {
+      if (containerWidth < 600) {
+        // Mobile: minimal margins so all dots fit on screen
+        margin = { top: 20, right: 20, bottom: 20, left: 20 };
+      } else if (containerWidth < 1024) {
+        // Tablet: moderate margins
+        margin = { top: 30, right: 100, bottom: 40, left: 100 };
+      } else {
+        // Desktop: original large margins
+        margin = { top: 40, right: 400, bottom: 60, left: 320 };
+      }
+    }
     const radius = 10;
 
   let lastHoveredData = null;
   let t = zoomIdentity; // d3-zoom transform
-  const MIN_SCALE = 0.5;
+  const MIN_SCALE = 0.3; // Allow more zoom out to fit all dots on mobile
   const MAX_SCALE = 20;
     $: highlightedSet = new Set(highlightedData.map(d => d.id));
   $: uniqueDomainCount = new Set(data.map(d => d[domainColumn])).size;
@@ -585,9 +598,10 @@
   canvasSel = select(canvas);
   canvasSel.call(zoomBehavior);
 
-      // Set initial zoom for mobile (more zoomed in)
+      // Set initial zoom for mobile - zoom out slightly to ensure all dots fit
       if (containerWidth < 600) {
-        const initialScale = 1.5;
+        // Use scale < 1 to zoom out and fit all dots on screen
+        const initialScale = 0.85;
         const cx = containerWidth / 2;
         const cy = containerHeight / 2;
         const initialTransform = zoomIdentity.translate(cx * (1 - initialScale), cy * (1 - initialScale)).scale(initialScale);
@@ -711,9 +725,9 @@
       }
 
       .zoom-btn {
-        width: 36px;
-        height: 36px;
-        font-size: 18px;
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
       }
     }
 </style>

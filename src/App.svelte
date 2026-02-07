@@ -1610,12 +1610,78 @@ let autoPlayEnded = false; // Track if auto-play has finished
     .detail-panel {
       order: 3;
       display: none;
-      max-height: 50vh;
+      /* Mobile: full-screen overlay that slides up from bottom */
+      position: fixed;
+      top: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      max-height: 90vh;
+      min-height: 60vh;
+      border-radius: var(--radius-md, 12px) var(--radius-md, 12px) 0 0;
+      box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+      background: var(--bg-panel, rgba(255, 255, 255, 0.98));
+      z-index: 1000;
+      transform: translateY(100%);
+      transition: transform 0.3s ease-out;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .detail-panel.visible {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(0);
+    }
+
+    /* Overlay backdrop for mobile detail panel */
+    .detail-panel.visible::before {
+      content: "";
+      position: fixed;
+      top: -100vh;
+      left: 0;
+      right: 0;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .detail-panel .panel-close {
+      position: sticky;
+      top: 0;
+      right: 0;
+      width: 100%;
+      height: 44px;
+      min-height: 44px;
+      border-radius: 0;
+      background: var(--bg-panel, rgba(255, 255, 255, 0.98));
+      border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .detail-panel .panel-close::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 36px;
+      height: 4px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 2px;
+    }
+
+    .detail-panel .panel-content {
+      padding: 1rem 1.25rem 2rem;
+      flex: 1;
+      overflow-y: auto;
     }
 
     .panel-content {
@@ -1628,7 +1694,8 @@ let autoPlayEnded = false; // Track if auto-play has finished
     }
 
     .date-input {
-      font-size: 0.75rem;
+      font-size: 16px; /* Prevents iOS auto-zoom on focus */
+      min-height: 44px;
     }
 
     .date-navigation {
@@ -1636,7 +1703,14 @@ let autoPlayEnded = false; // Track if auto-play has finished
     }
 
     .nav-btn {
-      min-width: 40px;
+      min-width: 44px;
+      min-height: 44px;
+    }
+
+    .help-btn.mobile-only {
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
     }
 
     .info-accordion {
@@ -1679,6 +1753,16 @@ let autoPlayEnded = false; // Track if auto-play has finished
     .filter-select {
       font-size: 0.75rem;
       padding: 0.35rem 0.5rem;
+    }
+
+    /* Detail panel on very small screens - maximize readability */
+    .detail-panel {
+      max-height: 95vh;
+      min-height: 70vh;
+    }
+
+    .detail-panel .panel-content {
+      padding: 1rem 1rem 2.5rem;
     }
   }
 </style>
