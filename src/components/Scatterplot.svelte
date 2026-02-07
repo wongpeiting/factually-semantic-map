@@ -204,10 +204,15 @@
         ctx.globalAlpha = 1; // reset for next operations
       });
 
-      // Draw cluster/region labels on the map (hide on small screens)
-      if (clusterLabels && clusterLabels.length > 0 && containerWidth > 600) {
+      // Draw cluster/region labels on the map
+      if (clusterLabels && clusterLabels.length > 0) {
         ctx.globalAlpha = 0.85;
         ctx.textAlign = 'center';
+
+        // Smaller labels on mobile
+        const isMobile = containerWidth < 600;
+        const baseFontSize = isMobile ? 9 : 15;
+        const subBaseFontSize = isMobile ? 7 : 11;
 
         clusterLabels.forEach(label => {
           const screenX = margin.left + xScale(label.x);
@@ -219,20 +224,20 @@
           const subText = match ? match[2].trim() : null;
 
           // Draw main label (larger, bold)
-          const mainFontSize = Math.max(12, 15 / t.k);
+          const mainFontSize = Math.max(isMobile ? 8 : 12, baseFontSize / t.k);
           ctx.font = `bold ${mainFontSize}px Arial`;
           ctx.textBaseline = subText ? 'bottom' : 'middle';
 
           // Draw text with white outline for readability
           ctx.strokeStyle = 'white';
-          ctx.lineWidth = Math.max(2, 3 / t.k);
+          ctx.lineWidth = Math.max(isMobile ? 1.5 : 2, 3 / t.k);
           ctx.strokeText(mainText, screenX, screenY);
           ctx.fillStyle = '#333';
           ctx.fillText(mainText, screenX, screenY);
 
-          // Draw subtitle below (smaller)
-          if (subText) {
-            const subFontSize = Math.max(9, 11 / t.k);
+          // Draw subtitle below (smaller) - hide on mobile for cleaner look
+          if (subText && !isMobile) {
+            const subFontSize = Math.max(9, subBaseFontSize / t.k);
             ctx.font = `${subFontSize}px Arial`;
             ctx.textBaseline = 'top';
             const subY = screenY + 2 / t.k; // Small gap below main text

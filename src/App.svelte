@@ -1446,10 +1446,14 @@
     .detail-panel {
       order: 3;
       display: none;
+      transform: none;
+      opacity: 1;
+      max-height: 40vh;
+      overflow-y: auto;
     }
 
     .detail-panel.visible {
-      display: flex;
+      display: block;
     }
 
     .panel-content {
