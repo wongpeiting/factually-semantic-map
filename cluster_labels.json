@@ -1,48 +1,48 @@
 [
   {
-    "label": "Crime & Law",
+    "label": "Justice (Read: Death Penalty)",
     "x": 6.456520622222222,
     "y": 7.498332999999999,
     "count": 9
   },
   {
-    "label": "Governance",
+    "label": "Governance (Read: Election, Policies)",
     "x": 4.185893077272727,
     "y": 7.389720831818181,
     "count": 22
   },
   {
-    "label": "CPF & Retirement",
+    "label": "Finance (Read: CPF & Reserves)",
     "x": 1.306496068,
     "y": 6.33618625,
     "count": 20
   },
   {
-    "label": "Cost of Living",
+    "label": "Employment (Read: Cost of Living, Foreigners)",
     "x": 2.2017807300000003,
     "y": 5.0515384999999995,
     "count": 20
   },
   {
-    "label": "Crime & Law",
+    "label": "Law & Order (Read: Police)",
     "x": 4.295685160000001,
     "y": 6.074029229999999,
     "count": 10
   },
   {
-    "label": "Political Opposition",
+    "label": "Housing (Read: HDB, Prices)",
     "x": 0.951582237,
     "y": 8.551911,
     "count": 10
   },
   {
-    "label": "Political Opposition",
+    "label": "Accountability (Read: Ridout, Public Funds)",
     "x": 2.5459134461538464,
     "y": 7.64606953846154,
     "count": 13
   },
   {
-    "label": "Health",
+    "label": "Health (Read: Covid-19, Vaccines)",
     "x": 4.6944845950000005,
     "y": 4.432729609999999,
     "count": 20
